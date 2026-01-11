@@ -110,14 +110,13 @@ ZUI.OnButtonsChanged += () => {
 
 ## 🙏 Credits
 
-- **Panthernet** - BloodCraftUI - OnlyFams was used as a base template
+- **Panthernet** - BloodCraftUI - OnlyFams was used as a base template & I am using his ModernUI.
 - **Flaticon.com** - Resize image icon
-- **ZUI Contributors** - For ongoing development and improvements
 
 ---
 
 ## 📄 License
 
-This product is licensed under LGPLv3, but the base mod/plugin 'BloodCraftUI - OnlyFams' is registered under MIT, so therefor this is a dual-license between MIT and my works which is LGPLv3.
+This product is licensed under LGPLv3, but the base plugin 'BloodCraftUI - OnlyFams' is registered under MIT, so therefor this is a dual-license between MIT and my works which is LGPLv3.
 
 See [LICENSE.txt](LICENSE.txt) for LGPLv3 details and [LICENSE.mit](LICENSE.mit) for MIT details.

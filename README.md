@@ -1,7 +1,5 @@
 # ZUI - Modern UI Framework for V Rising
 
-> **Credits**: Panthernet - BloodCraftUI - OnlyFams was used as a base template
-
 A powerful, modular UI framework for V Rising that provides an intuitive API for creating custom interfaces and integrating with game systems.
 
 ---

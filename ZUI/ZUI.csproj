@@ -1,0 +1,27 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <AssemblyName>ZUI</AssemblyName>
+    <Description>ZUI mod for VRising</Description>
+    <Version>1.1.0</Version>
+    <Authors>Zanakinz</Authors>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>ZUI</RootNamespace>
+    <PackageId>$(Authors).$(AssemblyName)</PackageId>
+    <PackageProjectUrl></PackageProjectUrl>
+    <BepInExVersion>6.0.0-be.733</BepInExVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Text.Json" Version="9.0.5" />
+    <PackageReference Include="BepInEx.Unity.IL2CPP" Version="$(BepInExVersion)" IncludeAssets="compile" />
+    <PackageReference Include="VRising.Unhollowed.Client" Version="1.1.8.9179701" />
+  </ItemGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <DebugType>Full</DebugType>
+  </PropertyGroup>
+
+</Project>

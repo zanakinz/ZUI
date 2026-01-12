@@ -1,23 +1,25 @@
 # ZUI - Modern UI Framework for V Rising
 
-A powerful, modular UI framework for V Rising that provides an intuitive API for creating custom interfaces and integrating with game systems.
+A powerful, modular UI framework for V Rising that provides an intuitive API for creating custom interfaces and integrating with game systems.  This mod was created using BloodCraftUI - OnlyFams as a template base.  So this mod has built in interactions between most of BloodCraft systems, also it has built-in features for KinPonds & ScarletSigns.
 
 ---
 
 ## ✨ Features
 
-- **Modular Design** - Component-based architecture for building flexible and reusable UI elements
 - **Customizable Themes** - Dynamic theming system with opacity controls and visual customization
 - **Resizable Panels** - Drag-and-drop panel system with persistent positioning and sizing
 - **Plugin Registry** - Easy registration system for external mods to add custom buttons and commands
 - **Event-Driven Architecture** - Reactive UI updates with built-in event handling
 - **Sprite Loading** - Simple API for loading custom sprites and icons from your plugin directory
 - **State Management** - Built-in services for managing game state and dependencies
-- **Hot Reload Support** - Dynamic UI updates without requiring game restarts
 - **Accessibility** - Clean, intuitive interfaces designed for ease of use
 - **Performance Optimized** - Efficient rendering and update systems for smooth gameplay
 
 ---
+
+## How to Install
+
+Place ZUI.dll and the Sprites folder (the folder itself along with its contents) into your plugins folder.
 
 ## 📚 API Hooks & How to Use
 

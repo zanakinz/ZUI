@@ -49,11 +49,18 @@ namespace ZUI.UI.ModContent
         
         private static readonly List<string> WeaponStats = new List<string>
         {
-            "MaxHealth", "MovementSpeed", "PrimaryAttackSpeed", 
-            "PhysicalLifeLeech", "SpellLifeLeech", "PrimaryLifeLeech", 
-            "PhysicalPower", "SpellPower", 
-            "PhysicalCritChance", "PhysicalCritDamage", 
-            "SpellCritChance", "SpellCritDamage"
+            "MaxHealth",
+            "MovementSpeed", 
+            "PrimaryAttackSpeed", 
+            "PhysicalLifeLeech",
+            "SpellLifeLeech",
+            "PrimaryLifeLeech", 
+            "PhysicalPower",
+            "SpellPower", 
+            "PhysicalCritChance",
+            "PhysicalCritDamage", 
+            "SpellCritChance",
+            "SpellCritDamage"
         };
 
         private static readonly List<string> BloodStats = new List<string>
@@ -164,6 +171,7 @@ namespace ZUI.UI.ModContent
             
             _itemDropdown.value = 0;
             _itemDropdown.RefreshShownValue();
+            _selectedItemIndex = 0; // Initialize the index
             _selectedItem = options.Count > 0 ? options[0] : "";
 
             // Create Buttons
@@ -201,17 +209,17 @@ namespace ZUI.UI.ModContent
             if (_currentMode == "Weapon")
             {
                 // .weapon choosestat [WeaponIndex] [StatIndex]
-                // Note: Game expects the INDEX number, not the name
-                cmd = string.Format(MessageService.BCCOM_WEAPON_CHOOSESTAT, _selectedItemIndex, statIndex);
+                // Both parameters are numeric indices (1-based)
+                cmd = string.Format(MessageService.BCCOM_WEAPON_CHOOSESTAT, _selectedItemIndex + 1, statIndex + 1);
             }
             else
             {
-                // .blood choosestat [BloodIndex] [StatIndex]
-                cmd = string.Format(MessageService.BCCOM_BLOOD_CHOOSESTAT, _selectedItemIndex, statIndex);
+                // .blood choosestat [BloodTypeName] [StatIndex]
+                // First parameter is the blood type NAME, second is the stat index (1-based)
+                cmd = string.Format(MessageService.BCCOM_BLOOD_CHOOSESTAT, _selectedItem, statIndex + 1);
             }
 
             MessageService.EnqueueMessage(cmd);
-            Plugin.LogInstance.LogInfo($"LevelUp command: {cmd}");
         }
     }
 }

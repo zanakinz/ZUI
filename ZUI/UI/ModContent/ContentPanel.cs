@@ -57,14 +57,20 @@ namespace ZUI.UI.ModContent
                 var pinButton = UIFactory.CreateToggle(_uiAnchor, "PinButton");
                 UIFactory.SetLayoutElement(pinButton.GameObject, minHeight: 15, preferredHeight: 15, flexibleHeight: 0,
                     minWidth: 15, preferredWidth: 15, flexibleWidth: 0, ignoreLayout: false);
-                pinButton.Toggle.isOn = false;
-                pinButton.OnValueChanged += (value) => IsPinned = value;
+                // Initialize with saved value
+                pinButton.Toggle.isOn = Settings.IsUILocked;
+                IsPinned = Settings.IsUILocked;
+                pinButton.OnValueChanged += (value) => 
+                {
+                    IsPinned = value;
+                    Settings.IsUILocked = value;
+                };
                 _pinToggle = pinButton.Toggle;
                 pinButton.Text.text = " ";
             }
 
             // ZUI Version Label
-            var text = UIFactory.CreateLabel(_uiAnchor, "UIAnchorText", $"ZUI 1.0");
+            var text = UIFactory.CreateLabel(_uiAnchor, "UIAnchorText", $"ZUI 1.0.2");
             UIFactory.SetLayoutElement(text.GameObject, 80, 25, 1, 1);
             _objectsList.Add(text.GameObject);
 

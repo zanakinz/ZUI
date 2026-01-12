@@ -66,6 +66,12 @@ namespace ZUI.Config
         public static bool IsPrestigeButtonEnabled => (ConfigEntries[nameof(IsPrestigeButtonEnabled)] as ConfigEntry<bool>)?.Value ?? true;
         public static bool IsToggleButtonEnabled => (ConfigEntries[nameof(IsToggleButtonEnabled)] as ConfigEntry<bool>)?.Value ?? true;
 
+        public static bool IsUILocked
+        {
+            get => (ConfigEntries[nameof(IsUILocked)] as ConfigEntry<bool>)?.Value ?? false;
+            set => ConfigEntries[nameof(IsUILocked)].BoxedValue = value;
+        }
+
         // Server Mod Availability (manual override for servers without specific mods)
         public static bool ServerHasBloodCraft => (ConfigEntries[nameof(ServerHasBloodCraft)] as ConfigEntry<bool>)?.Value ?? true;
         public static bool ServerHasKindredCommands => (ConfigEntries[nameof(ServerHasKindredCommands)] as ConfigEntry<bool>)?.Value ?? true;
@@ -109,6 +115,7 @@ namespace ZUI.Config
             InitConfigEntry(UI_SETTINGS_GROUP, nameof(IsCombatButtonEnabled), true, "Is combat button enabled");
             InitConfigEntry(UI_SETTINGS_GROUP, nameof(IsPrestigeButtonEnabled), true, "Is prestige button enabled");
             InitConfigEntry(UI_SETTINGS_GROUP, nameof(IsToggleButtonEnabled), true, "Is toggle button enabled");
+            InitConfigEntry(UI_SETTINGS_GROUP, nameof(IsUILocked), false, "Is UI locked (pin button state)");
             return this;
         }
 

@@ -118,8 +118,6 @@ namespace ZUI.UI.ModContent
             _buttonsContainer = scrollContent;
             UIFactory.SetLayoutElement(scrollObj, flexibleHeight: 9999, flexibleWidth: 9999);
             
-            // Fix: CreateScrollView adds a VerticalLayoutGroup by default to content.
-            // We need to destroy it before adding GridLayoutGroup to avoid the crash.
             var vlg = _buttonsContainer.GetComponent<VerticalLayoutGroup>();
             if (vlg != null)
                 UnityEngine.Object.DestroyImmediate(vlg);

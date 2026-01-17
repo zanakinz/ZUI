@@ -165,7 +165,8 @@ namespace ZUI
         public static void UIOnInitialize()
         {
             UIManager.SetupAndShowUI();
-            if(Settings.AutoEnableFamiliarEquipment)
+            ModRegistry.ProcessInitQueue();
+            if (Settings.AutoEnableFamiliarEquipment)
                 MessageService.EnqueueMessage(MessageService.BCCOM_ENABLEEQUIP);
             FamiliarStateService.Initialize();
             LogUtils.LogInfo($"UI Manager initialized");

@@ -10,8 +10,6 @@ A powerful, modular UI framework for V Rising that provides an intuitive API for
 - **Resizable Panels** - Drag-and-drop panel system with persistent positioning and sizing
 - **Plugin Registry** - Easy registration system for external mods to add custom buttons and commands
 - **Event-Driven Architecture** - Reactive UI updates with built-in event handling
-- **Sprite Loading** - Simple API for loading custom sprites and icons from your plugin directory
-- **State Management** - Built-in services for managing game state and dependencies
 - **Accessibility** - Clean, intuitive interfaces designed for ease of use
 - **Performance Optimized** - Efficient rendering and update systems for smooth gameplay
 
@@ -41,38 +39,6 @@ ZUI.AddButton("Heal", ".heal", "Heals the player to full health");
 ZUI.AddButton("Teleport Home", ".tp home", "Teleports you to your spawn point");
 ```
 
-### Creating Panels
-
-```csharp
-using ZUI.UI.CustomLib.Panel;
-using ZUI.UI.UniverseLib.UI;
-
-public class MyCustomPanel : ResizablePanelBase
-{
-    public MyCustomPanel(UIBase owner) : base(owner) { }
-    
-    public override string Name => "My Custom Panel";
-    public override int MinWidth => 300;
-    public override int MinHeight => 200;
-    
-    protected override void ConstructPanelContent()
-    {
-        base.ConstructPanelContent();
-        // Add your custom UI elements here
-    }
-}
-```
-
-### Loading Custom Sprites
-
-```csharp
-using ZUI;
-
-// Load a sprite from your plugin's Sprites directory
-// Place images in: BepInEx/plugins/{YourPlugin}/Sprites/{filename}
-var myIcon = Plugin.LoadSprite("icon.png", 100f);
-```
-
 ### Example API Hooks
 
 | Hook | Description | Usage |
@@ -80,9 +46,6 @@ var myIcon = Plugin.LoadSprite("icon.png", 100f);
 | `ZUI.SetPlugin(string)` | Sets the plugin context for registrations | `ZUI.SetPlugin("MyMod");` |
 | `ZUI.AddCategory(string)` | Creates a category under the current plugin | `ZUI.AddCategory("Admin");` |
 | `ZUI.AddButton(string, string, string)` | Registers a button with command | `ZUI.AddButton("Text", ".cmd", "tooltip");` |
-| `ZUI.RemoveButton(string)` | Removes a registered button | `ZUI.RemoveButton("Text");` |
-| `ZUI.RemovePlugin(string)` | Removes entire plugin registration | `ZUI.RemovePlugin("MyMod");` |
-| `Plugin.LoadSprite(string, float)` | Loads a sprite from plugin directory | `Plugin.LoadSprite("icon.png", 100f);` |
 
 ### Advanced Registration Example
 
@@ -119,4 +82,4 @@ ZUI.OnButtonsChanged += () => {
 
 This product is licensed under LGPLv3, but the base plugin 'BloodCraftUI - OnlyFams' is registered under MIT, so therefor this is a dual-license between MIT and my works which is LGPLv3.
 
-See [LICENSE.txt](LICENSE.txt) for LGPLv3 details and [LICENSE.mit](LICENSE.mit) for MIT details.
+See [LICENSE.LGPLv3](LICENSE.LGPLv3) for LGPLv3 details and [LICENSE.mit](LICENSE.mit) for MIT details.

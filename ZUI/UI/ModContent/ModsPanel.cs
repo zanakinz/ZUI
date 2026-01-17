@@ -176,11 +176,75 @@ namespace ZUI.UI.ModContent
             
             // Capture the command in a local variable for the closure
             var command = modButton.Command;
-            btn.OnClick = () =>
+            var callback = modButton.OnClick;
+            
+            // Use direct callback if available, otherwise use command string
+            if (callback != null)
             {
-                MessageService.EnqueueMessage(command);
-                Plugin.LogInstance.LogInfo($"[Mods] Executing: {command}");
-            };
+                btn.OnClick = () =>
+                {
+                    try
+                    {
+                        callback.Invoke();
+                        Plugin.LogInstance.LogInfo($"[Mods] Executed callback for: {modButton.ButtonText}");
+                    }
+                    catch (System.Exception ex)
+                    {
+                        Plugin.LogInstance.LogError($"[Mods] Callback error for {modButton.ButtonText}: {ex.Message}");
+                    }
+                };
+            }
+            else if (!string.IsNullOrEmpty(command))
+            {
+                btn.OnClick = () =>
+                {
+                    MessageService.EnqueueMessage(command);
+                    Plugin.LogInstance.LogInfo($"[Mods] Executing: {command}");
+                };
+            }
+            else
+            {
+                Plugin.LogInstance.LogError($"[Mods] Button {modButton.ButtonText} has no callback or command!");
+            }
+            
+            // Add right-click support to avoid triggering character attacks
+            if (callback != null || !string.IsNullOrEmpty(command))
+            {
+                var eventTrigger = btn.GameObject.GetComponent<UnityEngine.EventSystems.EventTrigger>();
+                if (eventTrigger == null)
+                    eventTrigger = btn.GameObject.AddComponent<UnityEngine.EventSystems.EventTrigger>();
+                
+                var rightClickEntry = new UnityEngine.EventSystems.EventTrigger.Entry
+                {
+                    eventID = UnityEngine.EventSystems.EventTriggerType.PointerClick
+                };
+                rightClickEntry.callback.AddListener((data) =>
+                {
+                    // IL2CPP requires explicit casting through TryCast
+                    var pointerData = data.TryCast<UnityEngine.EventSystems.PointerEventData>();
+                    if (pointerData != null && pointerData.button == UnityEngine.EventSystems.PointerEventData.InputButton.Right)
+                    {
+                        if (callback != null)
+                        {
+                            try
+                            {
+                                callback.Invoke();
+                                Plugin.LogInstance.LogInfo($"[Mods] Executed callback (right-click) for: {modButton.ButtonText}");
+                            }
+                            catch (System.Exception ex)
+                            {
+                                Plugin.LogInstance.LogError($"[Mods] Callback error (right-click) for {modButton.ButtonText}: {ex.Message}");
+                            }
+                        }
+                        else if (!string.IsNullOrEmpty(command))
+                        {
+                            MessageService.EnqueueMessage(command);
+                            Plugin.LogInstance.LogInfo($"[Mods] Executing (right-click): {command}");
+                        }
+                    }
+                });
+                eventTrigger.triggers.Add(rightClickEntry);
+            }
 
             // Add tooltip if available (future enhancement)
             if (!string.IsNullOrEmpty(modButton.Tooltip))

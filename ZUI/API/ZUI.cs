@@ -4,172 +4,163 @@ using System.Collections.Generic;
 namespace ZUI.API
 {
     /// <summary>
-    /// Clean, simple API wrapper for external plugins to register buttons with ZUI.
+    /// Clean, simple API wrapper for external plugins to register buttons with ZUI or create Custom UI Windows.
     /// This is the recommended way to interact with ZUI from external plugins.
-    /// 
-    /// For advanced usage, you can also use ModRegistry directly.
     /// </summary>
     public static class ZUI
     {
+        // ==============================================================================================
+        // CONTEXT MANAGEMENT
+        // ==============================================================================================
+
         /// <summary>
         /// Sets the plugin name context for subsequent registrations.
-        /// All buttons and categories registered after this call will be grouped under this plugin.
-        /// This must be called before adding categories or buttons.
         /// </summary>
-        /// <param name="pluginName">The name of your plugin (e.g., "MyAwesomeMod")</param>
-        /// <example>
-        /// <code>
-        /// ZUI.SetPlugin("MyMod");
-        /// </code>
-        /// </example>
         public static void SetPlugin(string pluginName)
         {
             ModRegistry.SetPlugin(pluginName);
         }
 
         /// <summary>
-        /// Adds a category under the current plugin context.
-        /// All buttons registered after this call will be grouped under this category.
+        /// (Advanced) Sets the active window context for the current plugin.
         /// </summary>
-        /// <param name="categoryName">The name of the category (e.g., "Player", "Admin", "Utility")</param>
-        /// <example>
-        /// <code>
-        /// ZUI.SetPlugin("MyMod");
-        /// ZUI.AddCategory("Player");
-        /// ZUI.AddButton("Heal", ".heal");
-        /// </code>
-        /// </example>
-        public static void AddCategory(string categoryName)
+        public static void SetTargetWindow(string windowId)
         {
-            ModRegistry.AddCategory(categoryName);
+            ModRegistry.SetTargetWindow(windowId);
         }
 
-        /// <summary>
-        /// Adds a button under the current plugin and category context.
-        /// The button will execute the specified command when clicked.
-        /// </summary>
-        /// <param name="buttonText">The text to display on the button</param>
-        /// <param name="command">The BloodCraft command to execute (e.g., ".heal", ".spawn npc")</param>
-        /// <param name="tooltip">Optional tooltip text (not yet implemented)</param>
-        /// <returns>True if registration successful, false if duplicate or invalid</returns>
-        /// <example>
-        /// <code>
-        /// ZUI.SetPlugin("MyMod");
-        /// ZUI.AddCategory("Player");
-        /// ZUI.AddButton("Heal", ".heal");
-        /// ZUI.AddButton("Teleport", ".tp home", "Teleports you to spawn");
-        /// </code>
-        /// </example>
-        public static bool AddButton(string buttonText, string command, string tooltip = "")
-        {
-            return ModRegistry.AddButton(buttonText, command, tooltip);
-        }
-
-        /// <summary>
-        /// Removes a registered button by text from the current plugin context.
-        /// The plugin context must be set before calling this method.
-        /// </summary>
-        /// <param name="buttonText">The button text to remove</param>
-        /// <returns>True if removed, false if not found</returns>
-        /// <example>
-        /// <code>
-        /// ZUI.SetPlugin("MyMod");
-        /// ZUI.RemoveButton("Heal");
-        /// </code>
-        /// </example>
-        public static bool RemoveButton(string buttonText)
-        {
-            return ModRegistry.RemoveButton(buttonText);
-        }
-
-        /// <summary>
-        /// Removes an entire plugin and all its categories/buttons.
-        /// </summary>
-        /// <param name="pluginName">The plugin name to remove</param>
-        /// <returns>True if removed, false if not found</returns>
-        /// <example>
-        /// <code>
-        /// ZUI.RemovePlugin("MyMod");
-        /// </code>
-        /// </example>
         public static bool RemovePlugin(string pluginName)
         {
             return ModRegistry.RemovePlugin(pluginName);
         }
 
+        // ==============================================================================================
+        // CUSTOM UI CREATION
+        // ==============================================================================================
+
         /// <summary>
-        /// Gets all registered plugins with their categories and buttons.
-        /// Useful for debugging or displaying registered content.
+        /// Initialize a Custom UI Window using a pre-defined template (Small, Medium, Large).
         /// </summary>
-        /// <returns>Read-only list of registered plugins</returns>
-        /// <example>
-        /// <code>
-        /// var plugins = ZUI.GetPlugins();
-        /// foreach (var plugin in plugins)
-        /// {
-        ///     Console.WriteLine($"Plugin: {plugin.PluginName}");
-        ///     foreach (var category in plugin.Categories)
-        ///     {
-        ///         Console.WriteLine($"  Category: {category.CategoryName}");
-        ///         foreach (var button in category.Buttons)
-        ///         {
-        ///             Console.WriteLine($"    Button: {button.ButtonText}");
-        ///         }
-        ///     }
-        /// }
-        /// </code>
-        /// </example>
-        public static IReadOnlyList<ModRegistry.ModPlugin> GetPlugins()
+        public static void SetUI(string templateName)
         {
-            return ModRegistry.GetPlugins();
+            ModRegistry.SetUITemplate(templateName);
         }
 
         /// <summary>
-        /// Clears all registered plugins, categories, and buttons.
-        /// WARNING: Use with extreme caution as this will remove all registrations from all plugins!
+        /// Initialize a Custom UI Window with specific dimensions.
         /// </summary>
-        /// <example>
-        /// <code>
-        /// ZUI.ClearAll(); // This will clear EVERYTHING!
-        /// </code>
-        /// </example>
+        public static void SetUI(int width, int height)
+        {
+            ModRegistry.SetUICustom(width, height);
+        }
+
+        /// <summary>
+        /// Hides the standard top title bar (and its default close button). 
+        /// Use this if you want a cleaner look and plan to add your own Close Button via <see cref="AddCloseButton(string, float, float)"/>.
+        /// </summary>
+        public static void HideTitleBar()
+        {
+            ModRegistry.HideTitleBar();
+        }
+
+        // ==============================================================================================
+        // CONTENT REGISTRATION
+        // ==============================================================================================
+
+        public static void AddCategory(string categoryName)
+        {
+            ModRegistry.AddCategory(categoryName);
+        }
+
+        public static void AddCategory(string categoryName, float x, float y)
+        {
+            ModRegistry.AddCategory(categoryName, x, y);
+        }
+
+        public static bool AddButton(string buttonText, string command)
+        {
+            return ModRegistry.AddButton(buttonText, command, "");
+        }
+
+        public static bool AddButton(string buttonText, string command, string tooltip)
+        {
+            return ModRegistry.AddButton(buttonText, command, tooltip);
+        }
+
+        public static bool AddButton(string buttonText, string command, float x, float y)
+        {
+            return ModRegistry.AddButton(buttonText, command, "", x, y);
+        }
+
+        public static void AddText(string text)
+        {
+            ModRegistry.AddText(text);
+        }
+
+        public static void AddText(string text, float x, float y)
+        {
+            ModRegistry.AddText(text, x, y);
+        }
+
+        // --- NEW: CLOSE BUTTONS ---
+
+        /// <summary>
+        /// Adds a button that closes the current window.
+        /// (Template Mode: Adds to button list)
+        /// </summary>
+        public static void AddCloseButton(string text = "Close")
+        {
+            ModRegistry.AddCloseButton(text, -1, -1);
+        }
+
+        /// <summary>
+        /// Adds a button that closes the current window at a specific position.
+        /// (Canvas Mode: Perfect for custom 'X' buttons in the top right)
+        /// </summary>
+        public static void AddCloseButton(string text, float x, float y)
+        {
+            ModRegistry.AddCloseButton(text, x, y);
+        }
+
+        // ==============================================================================================
+        // MANAGEMENT
+        // ==============================================================================================
+
+        public static bool AddButtonWithCallback(string buttonText, Action onClick, string tooltip = "")
+        {
+            return ModRegistry.AddButtonWithCallback(buttonText, onClick, tooltip);
+        }
+
+        public static bool RemoveButton(string buttonText)
+        {
+            return ModRegistry.RemoveButton(buttonText);
+        }
+
+        public static void RemoveElement(string elementId)
+        {
+            ModRegistry.RemoveButton(elementId);
+        }
+
         public static void ClearAll()
         {
             ModRegistry.ClearAll();
         }
 
-        /// <summary>
-        /// Event fired when buttons are added or removed.
-        /// Subscribe to this event to be notified of changes.
-        /// </summary>
-        /// <example>
-        /// <code>
-        /// ZUI.OnButtonsChanged += () => Console.WriteLine("Buttons updated!");
-        /// </code>
-        /// </example>
+        public static IReadOnlyList<ModRegistry.ModPlugin> GetPlugins()
+        {
+            return ModRegistry.GetPlugins();
+        }
+
         public static event Action OnButtonsChanged
         {
             add => ModRegistry.OnButtonsChanged += value;
             remove => ModRegistry.OnButtonsChanged -= value;
         }
 
-        #region Type Aliases for Convenience
-        
-        /// <summary>
-        /// Alias for ModRegistry.ModPlugin for convenience when using ZUI API.
-        /// </summary>
+        #region Type Aliases
         public class Plugin : ModRegistry.ModPlugin { }
-
-        /// <summary>
-        /// Alias for ModRegistry.ModCategory for convenience when using ZUI API.
-        /// </summary>
         public class Category : ModRegistry.ModCategory { }
-
-        /// <summary>
-        /// Alias for ModRegistry.ModButton for convenience when using ZUI API.
-        /// </summary>
         public class Button : ModRegistry.ModButton { }
-
         #endregion
     }
 }

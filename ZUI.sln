@@ -13,6 +13,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionItems", "SolutionIt
 		TODO.txt = TODO.txt
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CombatAnalytics", "CombatAnalytics\CombatAnalytics.csproj", "{E0F603ED-536D-4194-91A6-36FE64B47E7F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZUIExampleMod", "..\ZUIExampleMod\ZUIExampleMod.csproj", "{0375FDA4-E2A0-DA6E-22EC-4339698A77D6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +31,14 @@ Global
 		{4F88EDBC-D75F-4058-9558-B254544FE73B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4F88EDBC-D75F-4058-9558-B254544FE73B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4F88EDBC-D75F-4058-9558-B254544FE73B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E0F603ED-536D-4194-91A6-36FE64B47E7F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E0F603ED-536D-4194-91A6-36FE64B47E7F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E0F603ED-536D-4194-91A6-36FE64B47E7F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E0F603ED-536D-4194-91A6-36FE64B47E7F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0375FDA4-E2A0-DA6E-22EC-4339698A77D6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0375FDA4-E2A0-DA6E-22EC-4339698A77D6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0375FDA4-E2A0-DA6E-22EC-4339698A77D6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0375FDA4-E2A0-DA6E-22EC-4339698A77D6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

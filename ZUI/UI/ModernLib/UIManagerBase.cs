@@ -5,7 +5,7 @@ namespace ZUI.UI.ModernLib;
 
 public abstract class UIManagerBase
 {
-    protected UIBase UiBase { get; set; }
+    public UIBase UiBase { get; protected set; }
     public GameObject UIRoot => UiBase?.RootObject;
     public bool IsInitialized { get; protected set; }
 

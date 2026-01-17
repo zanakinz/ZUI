@@ -9,6 +9,7 @@ using ZUI.UI.UniverseLib.UI.Models;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using ZUI.Utils; // Added for SpriteLoader
 using ButtonRef = ZUI.UI.UniverseLib.UI.Models.ButtonRef;
 using Object = UnityEngine.Object;
 
@@ -60,7 +61,7 @@ public abstract class PanelBase : UIBehaviourModel, IPanelBase
     protected void ForceRecalculateBasePanelWidth(List<GameObject> data = null)
     {
         float contentWidth = 0;
-        if(data != null)
+        if (data != null)
         {
             foreach (var obj in data)
             {
@@ -224,24 +225,50 @@ public abstract class PanelBase : UIBehaviourModel, IPanelBase
         UIFactory.SetLayoutElement(TitleLabel.GameObject, 50, 25, 9999, 0);
 
         // close button
-
         CloseButton = UIFactory.CreateUIObject("CloseHolder", TitleBar);
         UIFactory.SetLayoutElement(CloseButton, minHeight: 25, flexibleHeight: 0, minWidth: 30, flexibleWidth: 9999);
         UIFactory.SetLayoutGroup<HorizontalLayoutGroup>(CloseButton, false, false, true, true, 3, childAlignment: TextAnchor.MiddleRight);
-        ButtonRef closeBtn = UIFactory.CreateButton(CloseButton, "CloseButton", "—");
-        // Remove the button outline
+
+        ButtonRef closeBtn = UIFactory.CreateButton(CloseButton, "CloseButton", "—"); // Default placeholder
         Object.Destroy(closeBtn.Component.gameObject.GetComponent<Outline>());
         UIFactory.SetLayoutElement(closeBtn.Component.gameObject, minHeight: 25, minWidth: 25, flexibleWidth: 0);
-        closeBtn.Component.colors = new ColorBlock()
+
+        // --- CUSTOM CLOSE BUTTON LOGIC ---
+        // Attempt to load the custom sprite from ZUI assembly
+        var closeSprite = SpriteLoader.LoadSpriteFromAssembly(typeof(Plugin).Assembly, "close_button.png", 100f);
+
+        if (closeSprite != null)
         {
-            normalColor = Theme.SliderHandle,
-            colorMultiplier = 1
-        };
+            // IMAGE FOUND
+            var img = closeBtn.Component.GetComponent<Image>();
+            img.sprite = closeSprite;
+            img.color = Color.white;
+
+            // Clear text
+            closeBtn.ButtonText.text = "";
+
+            // Neutral colors for sprite mode
+            var colors = closeBtn.Component.colors;
+            colors.normalColor = Color.white;
+            colors.highlightedColor = new Color(0.9f, 0.9f, 0.9f, 1f);
+            colors.pressedColor = new Color(0.7f, 0.7f, 0.7f, 1f);
+            closeBtn.Component.colors = colors;
+        }
+        else
+        {
+            // FALLBACK: Red "X" Style
+            closeBtn.ButtonText.text = "X";
+            var colors = closeBtn.Component.colors;
+            colors.normalColor = new Color(0.8f, 0.2f, 0.2f, 1f); // Red
+            colors.highlightedColor = new Color(1f, 0.3f, 0.3f, 1f);
+            colors.pressedColor = new Color(0.6f, 0.1f, 0.1f, 1f);
+            closeBtn.Component.colors = colors;
+        }
 
         closeBtn.OnClick += OnClosePanelClicked;
 
         if (!(CanDrag || CanResize > 0)) TitleBar.SetActive(false);
-       
+
         // Panel dragger
 
         Dragger = CreatePanelDragger();
@@ -281,4 +308,3 @@ public abstract class PanelBase : UIBehaviourModel, IPanelBase
         }
     }
 }
-

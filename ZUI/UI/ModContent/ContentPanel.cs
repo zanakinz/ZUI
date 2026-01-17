@@ -6,6 +6,7 @@ using ZUI.UI.CustomLib.Panel;
 using ZUI.UI.CustomLib.Util;
 using ZUI.UI.ModContent.Data;
 using ZUI.UI.UniverseLib.UI;
+using ZUI.UI.UniverseLib.UI.Models;
 using ZUI.UI.UniverseLib.UI.Panels;
 using ZUI.Utils;
 using UnityEngine;
@@ -35,6 +36,10 @@ namespace ZUI.UI.ModContent
         private Toggle _pinToggle;
         public override float Opacity => Settings.UITransparency;
 
+        // Cache sprites to avoid reloading repeatedly
+        private Sprite _btnNormalSprite;
+        private Sprite _btnSelectedSprite;
+
         public ContentPanel(UIBase owner) : base(owner)
         {
         }
@@ -42,9 +47,29 @@ namespace ZUI.UI.ModContent
         protected override void ConstructPanelContent()
         {
             TitleBar.SetActive(false);
+
+            // --- LOAD SPRITES ---
+            // Load panel background (30px border)
+            var panelSprite = SpriteLoader.LoadSprite("panel.png", 100f, new Vector4(30, 30, 30, 30));
+            // Load button sprites (10px border)
+            _btnNormalSprite = SpriteLoader.LoadSprite("button.png", 100f, new Vector4(10, 10, 10, 10));
+            _btnSelectedSprite = SpriteLoader.LoadSprite("button_selected.png", 100f, new Vector4(10, 10, 10, 10));
+
+            // Apply Panel Background
+            if (panelSprite != null)
+            {
+                var bgImage = ContentRoot.GetComponent<Image>();
+                if (bgImage != null)
+                {
+                    bgImage.sprite = panelSprite;
+                    bgImage.type = Image.Type.Sliced;
+                    bgImage.color = Color.white; // Use texture colors
+                }
+            }
+
             _uiAnchor = Settings.UseHorizontalContentLayout
                 ? UIFactory.CreateHorizontalGroup(ContentRoot, "UIAnchor", true, true, true, true)
-                : UIFactory.CreateVerticalGroup(ContentRoot, "UIAnchor", false, true, true, true, padding: new Vector4(5,5,5,5));
+                : UIFactory.CreateVerticalGroup(ContentRoot, "UIAnchor", false, true, true, true, padding: new Vector4(5, 5, 5, 5));
 
             Dragger.DraggableArea = Rect;
             Dragger.OnEndResize();
@@ -60,7 +85,7 @@ namespace ZUI.UI.ModContent
                 // Initialize with saved value
                 pinButton.Toggle.isOn = Settings.IsUILocked;
                 IsPinned = Settings.IsUILocked;
-                pinButton.OnValueChanged += (value) => 
+                pinButton.OnValueChanged += (value) =>
                 {
                     IsPinned = value;
                     Settings.IsUILocked = value;
@@ -83,8 +108,8 @@ namespace ZUI.UI.ModContent
                     ("Fam Stats", () => Plugin.UIManager.AddPanel(PanelType.FamStats)),
                     ("Toggle", () => { MessageService.EnqueueMessage(MessageService.BCCOM_TOGGLEFAM); }),
                     ("Unbind", () => { MessageService.EnqueueMessage(MessageService.BCCOM_UNBINDFAM); }),
-                    ("Rebind", () => 
-                    { 
+                    ("Rebind", () =>
+                    {
                         if (!string.IsNullOrEmpty(Settings.LastBindCommand))
                             MessageService.EnqueueMessage(Settings.LastBindCommand);
                     }),
@@ -107,6 +132,7 @@ namespace ZUI.UI.ModContent
             {
                 var questsButton = UIFactory.CreateButton(_uiAnchor, "QuestsButton", "Quests");
                 UIFactory.SetLayoutElement(questsButton.GameObject, ignoreLayout: false, minWidth: 65, minHeight: 25);
+                StyleButton(questsButton); // Apply Style
                 _objectsList.Add(questsButton.GameObject);
                 questsButton.OnClick = () => Plugin.UIManager.AddPanel(PanelType.Quests);
             }
@@ -116,6 +142,7 @@ namespace ZUI.UI.ModContent
             {
                 var classButton = UIFactory.CreateButton(_uiAnchor, "ClassButton", "Class");
                 UIFactory.SetLayoutElement(classButton.GameObject, ignoreLayout: false, minWidth: 60, minHeight: 25);
+                StyleButton(classButton); // Apply Style
                 _objectsList.Add(classButton.GameObject);
                 classButton.OnClick = () => Plugin.UIManager.AddPanel(PanelType.Class);
             }
@@ -152,30 +179,33 @@ namespace ZUI.UI.ModContent
             // MODS button - Always available
             var modsButton = UIFactory.CreateButton(_uiAnchor, "ModsButton", "Mods");
             UIFactory.SetLayoutElement(modsButton.GameObject, ignoreLayout: false, minWidth: 60, minHeight: 25);
+            StyleButton(modsButton); // Apply Style
             _objectsList.Add(modsButton.GameObject);
             modsButton.OnClick = () => Plugin.UIManager.AddPanel(PanelType.Mods);
 
             // SCALE button with resize icon
             var scaleButton = UIFactory.CreateButton(_uiAnchor, "ScaleButton", "");
             UIFactory.SetLayoutElement(scaleButton.GameObject, ignoreLayout: false, minWidth: 25, minHeight: 25);
+            // Note: We don't apply StyleButton to ScaleButton because it is an icon button
             _objectsList.Add(scaleButton.GameObject);
-            
+
             // Load and apply resize sprite with smart scaling
+            // SpriteLoader now supports borders, but defaults to null/zero which is correct for an icon
             var resizeSprite = SpriteLoader.LoadSprite("resize.png");
             if (resizeSprite != null)
             {
                 // Hide the button text
                 scaleButton.ButtonText.gameObject.SetActive(false);
-                
+
                 // Create a child GameObject for the icon
                 var iconObj = new GameObject("ResizeIcon");
                 iconObj.transform.SetParent(scaleButton.GameObject.transform, false);
-                
+
                 var iconImage = iconObj.AddComponent<Image>();
                 iconImage.sprite = resizeSprite;
                 iconImage.preserveAspect = true;
                 iconImage.raycastTarget = false;
-                
+
                 // Set the rect transform to fit within the button with padding
                 var iconRect = iconObj.GetComponent<RectTransform>();
                 iconRect.anchorMin = Vector2.zero;
@@ -188,13 +218,13 @@ namespace ZUI.UI.ModContent
                 // Fallback to text if sprite fails to load
                 scaleButton.ButtonText.text = "*";
             }
-            
+
             _scaleButtonData = new UIScaleSettingButton();
             scaleButton.OnClick = () =>
             {
                 _scaleButtonData.PerformAction();
                 var panel = Plugin.UIManager.GetPanel<FamStatsPanel>();
-                if(panel != null && panel.UIRoot.active)
+                if (panel != null && panel.UIRoot.active)
                     panel.RecalculateHeight();
             };
 
@@ -203,8 +233,33 @@ namespace ZUI.UI.ModContent
             {
                 var b = UIFactory.CreateButton(_uiAnchor, "TestButton", "T");
                 UIFactory.SetLayoutElement(b.GameObject, ignoreLayout: false, minWidth: 25, minHeight: 25);
+                StyleButton(b);
                 _objectsList.Add(scaleButton.GameObject);
                 b.OnClick = () => Plugin.UIManager.AddPanel(PanelType.TestPanel);
+            }
+        }
+
+        private void StyleButton(ButtonRef btn)
+        {
+            if (_btnNormalSprite == null) return;
+
+            var img = btn.GameObject.GetComponent<Image>();
+            if (img)
+            {
+                img.sprite = _btnNormalSprite;
+                img.type = Image.Type.Sliced;
+                img.color = Color.white;
+            }
+
+            if (_btnSelectedSprite != null)
+            {
+                var comp = btn.Component;
+                comp.transition = Selectable.Transition.SpriteSwap;
+                var state = comp.spriteState;
+                state.highlightedSprite = _btnSelectedSprite;
+                state.pressedSprite = _btnSelectedSprite;
+                state.selectedSprite = _btnSelectedSprite;
+                comp.spriteState = state;
             }
         }
 
@@ -212,25 +267,25 @@ namespace ZUI.UI.ModContent
         private void CreateUtilsSubmenu()
         {
             var utilsOptions = new List<(string optionText, System.Action action, bool enabled)>();
-            
+
             // Signs - requires ScarletSigns
-            utilsOptions.Add(("Signs", 
-                () => Plugin.UIManager.AddPanel(PanelType.Signs), 
+            utilsOptions.Add(("Signs",
+                () => Plugin.UIManager.AddPanel(PanelType.Signs),
                 DependencyService.HasScarletSigns));
-            
+
             // Ponds - requires KinPonds
-            utilsOptions.Add(("Ponds", 
-                () => MessageService.EnqueueMessage(MessageService.BCCOM_POND), 
+            utilsOptions.Add(("Ponds",
+                () => MessageService.EnqueueMessage(MessageService.BCCOM_POND),
                 DependencyService.HasKinPonds));
-            
+
             // User - requires KindredCommands
-            utilsOptions.Add(("User", 
-                () => Plugin.UIManager.AddPanel(PanelType.User), 
+            utilsOptions.Add(("User",
+                () => Plugin.UIManager.AddPanel(PanelType.User),
                 DependencyService.HasKindredCommands));
-            
+
             // Admin - requires KindredCommands
-            utilsOptions.Add(("Admin", 
-                () => Plugin.UIManager.AddPanel(PanelType.Admin), 
+            utilsOptions.Add(("Admin",
+                () => Plugin.UIManager.AddPanel(PanelType.Admin),
                 DependencyService.HasKindredCommands));
 
             // Only create submenu if at least one option is available
@@ -244,19 +299,20 @@ namespace ZUI.UI.ModContent
         {
             var button = UIFactory.CreateButton(_uiAnchor, $"{buttonText}Button", buttonText);
             UIFactory.SetLayoutElement(button.GameObject, ignoreLayout: false, minWidth: 70, minHeight: 25);
+            StyleButton(button); // Apply Style
             _objectsList.Add(button.GameObject);
 
             // Create submenu container
-            var menuContainer = UIFactory.CreateVerticalGroup(button.GameObject, $"{buttonText}MenuContainer", 
+            var menuContainer = UIFactory.CreateVerticalGroup(button.GameObject, $"{buttonText}MenuContainer",
                 true, false, true, true, 2, new Vector4(2, 2, 2, 2), new Color(0.1f, 0.1f, 0.1f, 0.9f));
             var menuRect = menuContainer.GetComponent<RectTransform>();
-            
+
             // Anchor to bottom of button
-            menuRect.anchorMin = new Vector2(0, 0); 
+            menuRect.anchorMin = new Vector2(0, 0);
             menuRect.anchorMax = new Vector2(1, 0);
             menuRect.pivot = new Vector2(0.5f, 1);
             menuRect.anchoredPosition = new Vector2(0, -2);
-            
+
             menuRect.sizeDelta = new Vector2(0, 0);
             var menuLe = menuContainer.GetComponent<LayoutElement>();
             if (menuLe) menuLe.ignoreLayout = true;
@@ -268,7 +324,8 @@ namespace ZUI.UI.ModContent
             {
                 var optionButton = UIFactory.CreateButton(menuContainer, $"{buttonText}_{optionText}Button", optionText);
                 UIFactory.SetLayoutElement(optionButton.GameObject, minHeight: 25, flexibleWidth: 9999);
-                optionButton.OnClick = () => 
+                StyleButton(optionButton); // Apply Style
+                optionButton.OnClick = () =>
                 {
                     menuContainer.SetActive(false);
                     action?.Invoke();
@@ -292,19 +349,20 @@ namespace ZUI.UI.ModContent
         {
             var button = UIFactory.CreateButton(_uiAnchor, $"{buttonText}Button", buttonText);
             UIFactory.SetLayoutElement(button.GameObject, ignoreLayout: false, minWidth: 70, minHeight: 25);
+            StyleButton(button); // Apply Style
             _objectsList.Add(button.GameObject);
 
             // Create submenu container
-            var menuContainer = UIFactory.CreateVerticalGroup(button.GameObject, $"{buttonText}MenuContainer", 
+            var menuContainer = UIFactory.CreateVerticalGroup(button.GameObject, $"{buttonText}MenuContainer",
                 true, false, true, true, 2, new Vector4(2, 2, 2, 2), new Color(0.1f, 0.1f, 0.1f, 0.9f));
             var menuRect = menuContainer.GetComponent<RectTransform>();
-            
+
             // Anchor to bottom of button
-            menuRect.anchorMin = new Vector2(0, 0); 
+            menuRect.anchorMin = new Vector2(0, 0);
             menuRect.anchorMax = new Vector2(1, 0);
             menuRect.pivot = new Vector2(0.5f, 1);
             menuRect.anchoredPosition = new Vector2(0, -2);
-            
+
             menuRect.sizeDelta = new Vector2(0, 0);
             var menuLe = menuContainer.GetComponent<LayoutElement>();
             if (menuLe) menuLe.ignoreLayout = true;
@@ -316,7 +374,8 @@ namespace ZUI.UI.ModContent
             {
                 var optionButton = UIFactory.CreateButton(menuContainer, $"{buttonText}_{optionText}Button", optionText);
                 UIFactory.SetLayoutElement(optionButton.GameObject, minHeight: 25, flexibleWidth: 9999);
-                
+                StyleButton(optionButton); // Apply Style
+
                 if (!enabled)
                 {
                     // Disable button visually - gray out
@@ -330,7 +389,7 @@ namespace ZUI.UI.ModContent
                 }
                 else
                 {
-                    optionButton.OnClick = () => 
+                    optionButton.OnClick = () =>
                     {
                         menuContainer.SetActive(false);
                         action?.Invoke();

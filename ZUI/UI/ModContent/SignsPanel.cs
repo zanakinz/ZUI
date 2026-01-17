@@ -7,8 +7,10 @@ using ZUI.UI.ModContent.Data;
 using ZUI.UI.UniverseLib.UI;
 using ZUI.UI.UniverseLib.UI.Models;
 using ZUI.UI.UniverseLib.UI.Panels;
+using ZUI.Utils;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace ZUI.UI.ModContent
 {
@@ -31,17 +33,43 @@ namespace ZUI.UI.ModContent
         private InputFieldRef _sizeInput;
         private string _selectedHex = "FFFFFF";
 
+        // Sprite Cache
+        private Sprite _btnNormalSprite;
+        private Sprite _btnSelectedSprite;
+
         public SignsPanel(UIBase owner) : base(owner)
         {
         }
 
         protected override void ConstructPanelContent()
         {
+            // --- LOAD SPRITES ---
+            var panelSprite = SpriteLoader.LoadSprite("panel.png", 100f, new Vector4(30, 30, 30, 30));
+            _btnNormalSprite = SpriteLoader.LoadSprite("button.png", 100f, new Vector4(10, 10, 10, 10));
+            _btnSelectedSprite = SpriteLoader.LoadSprite("button_selected.png", 100f, new Vector4(10, 10, 10, 10));
+
+            // Apply Panel Background
+            if (panelSprite != null)
+            {
+                var bgImage = ContentRoot.GetComponent<Image>();
+                if (bgImage != null)
+                {
+                    bgImage.sprite = panelSprite;
+                    bgImage.type = Image.Type.Sliced;
+                    bgImage.color = Color.white;
+                }
+            }
+
             SetTitle("Sign Creator");
-            
-            _contentLayout = UIFactory.CreateVerticalGroup(ContentRoot, "ContentLayout", true, true, true, true, 8,
-                new Vector4(10, 10, 10, 10), new Color(0.1f, 0.1f, 0.1f, 0.95f));
-            UIFactory.SetLayoutElement(_contentLayout, flexibleWidth: 9999, flexibleHeight: 9999);
+
+            // --- SCROLLVIEW SETUP ---
+            var scrollView = UIFactory.CreateScrollView(ContentRoot, "SignsScrollView", out _contentLayout, out var autoScroll,
+                new Color(0.05f, 0.05f, 0.05f, 0f));
+
+            UIFactory.SetLayoutElement(scrollView, flexibleWidth: 9999, flexibleHeight: 9999);
+
+            // Layout Group settings
+            UIFactory.SetLayoutGroup<VerticalLayoutGroup>(_contentLayout, false, false, true, true, 8, 10, 10, 10, 10);
 
             // Check for ScarletSigns dependency
             if (!DependencyService.HasScarletSigns)
@@ -51,7 +79,7 @@ namespace ZUI.UI.ModContent
             }
 
             // Instructions
-            var instructionLabel = UIFactory.CreateLabel(_contentLayout, "Instructions", 
+            var instructionLabel = UIFactory.CreateLabel(_contentLayout, "Instructions",
                 "Create custom colored signs in the game world", TextAlignmentOptions.Center);
             UIFactory.SetLayoutElement(instructionLabel.GameObject, minHeight: 25, flexibleWidth: 9999);
             instructionLabel.TextMesh.fontSize = 11;
@@ -89,15 +117,17 @@ namespace ZUI.UI.ModContent
 
             var createBtn = UIFactory.CreateButton(buttonContainer, "CreateBtn", "Create Sign");
             UIFactory.SetLayoutElement(createBtn.GameObject, minHeight: 40, flexibleWidth: 9999);
+            StyleButton(createBtn); // Apply Style
             createBtn.OnClick = OnCreateSign;
 
             var removeBtn = UIFactory.CreateButton(buttonContainer, "RemoveBtn", "Remove Sign");
             UIFactory.SetLayoutElement(removeBtn.GameObject, minHeight: 40, flexibleWidth: 9999);
+            StyleButton(removeBtn); // Apply Style
             removeBtn.OnClick = OnRemoveSign;
 
             // Help text
-            var helpLabel = UIFactory.CreateLabel(_contentLayout, "Help", 
-                "Signs will be created at your current position. Use Remove to delete the nearest sign.", 
+            var helpLabel = UIFactory.CreateLabel(_contentLayout, "Help",
+                "Signs will be created at your current position. Use Remove to delete the nearest sign.",
                 TextAlignmentOptions.Center);
             UIFactory.SetLayoutElement(helpLabel.GameObject, minHeight: 40, flexibleWidth: 9999);
             helpLabel.TextMesh.fontSize = 10;
@@ -106,7 +136,7 @@ namespace ZUI.UI.ModContent
 
         private void CreateMissingDependencyMessage(string dependencyName)
         {
-            var warningLabel = UIFactory.CreateLabel(_contentLayout, "MissingDependency", 
+            var warningLabel = UIFactory.CreateLabel(_contentLayout, "MissingDependency",
                 $"<color=#FF6B6B>? {dependencyName} Not Detected</color>\n\n" +
                 $"This feature requires the {dependencyName} mod to be installed on the server.\n\n" +
                 "Please contact your server administrator or install the required mod.",
@@ -133,12 +163,12 @@ namespace ZUI.UI.ModContent
             }
 
             size = Mathf.Clamp(size, 1, 10);
-            
+
             // Format: .sign create {text} {hexcolor} {size}
             // IMPORTANT: No quotes around text!
             var command = $".sign create {text} {_selectedHex} {size}";
             MessageService.EnqueueMessage(command);
-            
+
             Plugin.LogInstance.LogInfo($"Creating sign: '{text}' Color: #{_selectedHex} Size: {size}");
         }
 
@@ -146,6 +176,30 @@ namespace ZUI.UI.ModContent
         {
             MessageService.EnqueueMessage(MessageService.BCCOM_SIGN_REMOVE);
             Plugin.LogInstance.LogInfo("Removing nearest sign");
+        }
+
+        private void StyleButton(ButtonRef btn)
+        {
+            if (_btnNormalSprite == null) return;
+
+            var img = btn.GameObject.GetComponent<Image>();
+            if (img)
+            {
+                img.sprite = _btnNormalSprite;
+                img.type = Image.Type.Sliced;
+                img.color = Color.white;
+            }
+
+            if (_btnSelectedSprite != null)
+            {
+                var comp = btn.Component;
+                comp.transition = Selectable.Transition.SpriteSwap;
+                var state = comp.spriteState;
+                state.highlightedSprite = _btnSelectedSprite;
+                state.pressedSprite = _btnSelectedSprite;
+                state.selectedSprite = _btnSelectedSprite;
+                comp.spriteState = state;
+            }
         }
 
         protected override void OnClosePanelClicked()

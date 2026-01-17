@@ -6,6 +6,7 @@ using ZUI.UI.ModContent.Data;
 using ZUI.UI.UniverseLib.UI;
 using ZUI.UI.UniverseLib.UI.Models;
 using ZUI.UI.UniverseLib.UI.Panels;
+using ZUI.Utils;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -33,16 +34,37 @@ namespace ZUI.UI.ModContent
         private InputFieldRef _itemPrefabInput, _itemAmountInput;
         private InputFieldRef _npcGuidInput, _npcAmountInput, _npcLevelInput;
 
+        // Sprite Cache
+        private Sprite _btnNormalSprite;
+        private Sprite _btnSelectedSprite;
+
         public AdminPanel(UIBase owner) : base(owner)
         {
         }
 
         protected override void ConstructPanelContent()
         {
+            // --- LOAD SPRITES ---
+            var panelSprite = SpriteLoader.LoadSprite("panel.png", 100f, new Vector4(30, 30, 30, 30));
+            _btnNormalSprite = SpriteLoader.LoadSprite("button.png", 100f, new Vector4(10, 10, 10, 10));
+            _btnSelectedSprite = SpriteLoader.LoadSprite("button_selected.png", 100f, new Vector4(10, 10, 10, 10));
+
+            // Apply Panel Background
+            if (panelSprite != null)
+            {
+                var bgImage = ContentRoot.GetComponent<Image>();
+                if (bgImage != null)
+                {
+                    bgImage.sprite = panelSprite;
+                    bgImage.type = Image.Type.Sliced;
+                    bgImage.color = Color.white;
+                }
+            }
+
             SetTitle("Admin Commands");
-            
+
             var scrollView = UIFactory.CreateScrollView(ContentRoot, "ScrollView", out _contentLayout, out var autoScroll,
-                new Color(0.05f, 0.05f, 0.05f, 1f));
+                new Color(0.05f, 0.05f, 0.05f, 0f)); // Transparent bg for scroll view to let panel show through
             UIFactory.SetLayoutElement(scrollView, flexibleWidth: 9999, flexibleHeight: 9999);
             UIFactory.SetLayoutGroup<VerticalLayoutGroup>(_contentLayout, false, false, true, true, 5, 10, 10, 10, 10);
 
@@ -54,7 +76,7 @@ namespace ZUI.UI.ModContent
             }
 
             // Warning label
-            var warningLabel = UIFactory.CreateLabel(_contentLayout, "Warning", 
+            var warningLabel = UIFactory.CreateLabel(_contentLayout, "Warning",
                 "? ADMIN ONLY - Use these commands responsibly ?", TextAlignmentOptions.Center);
             UIFactory.SetLayoutElement(warningLabel.GameObject, minHeight: 30, flexibleWidth: 9999);
             warningLabel.TextMesh.fontStyle = FontStyles.Bold;
@@ -65,7 +87,7 @@ namespace ZUI.UI.ModContent
 
             // PLAYER MANAGEMENT SECTION
             CreateSectionTitle("Player Management");
-            
+
             // Player input field (shared)
             CreateInputField("Player Name:", ref _playerInput, "PlayerName");
 
@@ -75,10 +97,12 @@ namespace ZUI.UI.ModContent
 
             var godBtn = UIFactory.CreateButton(godMortalContainer, "GodBtn", "God Mode");
             UIFactory.SetLayoutElement(godBtn.GameObject, minHeight: 35, flexibleWidth: 9999);
+            StyleButton(godBtn);
             godBtn.OnClick = () => ExecuteCommand(string.Format(MessageService.BCCOM_ADMIN_GOD, _playerInput.Text));
 
             var mortalBtn = UIFactory.CreateButton(godMortalContainer, "MortalBtn", "Mortal Mode");
             UIFactory.SetLayoutElement(mortalBtn.GameObject, minHeight: 35, flexibleWidth: 9999);
+            StyleButton(mortalBtn);
             mortalBtn.OnClick = () => ExecuteCommand(string.Format(MessageService.BCCOM_ADMIN_MORTAL, _playerInput.Text));
 
             // Revive & Kill buttons
@@ -87,10 +111,12 @@ namespace ZUI.UI.ModContent
 
             var reviveBtn = UIFactory.CreateButton(reviveKillContainer, "ReviveBtn", "Revive Player");
             UIFactory.SetLayoutElement(reviveBtn.GameObject, minHeight: 35, flexibleWidth: 9999);
+            StyleButton(reviveBtn);
             reviveBtn.OnClick = () => ExecuteCommand(string.Format(MessageService.BCCOM_ADMIN_REVIVE, _playerInput.Text));
 
             var killBtn = UIFactory.CreateButton(reviveKillContainer, "KillBtn", "Kill Player");
             UIFactory.SetLayoutElement(killBtn.GameObject, minHeight: 35, flexibleWidth: 9999);
+            StyleButton(killBtn);
             killBtn.OnClick = () => ExecuteCommand(string.Format(MessageService.BCCOM_ADMIN_KILL, _playerInput.Text));
 
             // Teleport section
@@ -107,6 +133,7 @@ namespace ZUI.UI.ModContent
 
             var teleportBtn = UIFactory.CreateButton(_contentLayout, "TeleportBtn", "Teleport Player");
             UIFactory.SetLayoutElement(teleportBtn.GameObject, minHeight: 35, flexibleWidth: 9999);
+            StyleButton(teleportBtn);
             teleportBtn.OnClick = () =>
             {
                 var cmd = $".teleport {_xInput.Text} {_yInput.Text} {_zInput.Text} {_playerInput.Text}";
@@ -136,6 +163,7 @@ namespace ZUI.UI.ModContent
 
             var setTimeBtn = UIFactory.CreateButton(_contentLayout, "SetTimeBtn", "Set Time");
             UIFactory.SetLayoutElement(setTimeBtn.GameObject, minHeight: 35, flexibleWidth: 9999);
+            StyleButton(setTimeBtn);
             setTimeBtn.OnClick = () =>
             {
                 var cmd = $".settime {_dayInput.Text} {_hourInput.Text}";
@@ -150,10 +178,12 @@ namespace ZUI.UI.ModContent
 
             var lockRegionBtn = UIFactory.CreateButton(regionContainer, "LockRegionBtn", "Lock Region");
             UIFactory.SetLayoutElement(lockRegionBtn.GameObject, minHeight: 35, flexibleWidth: 9999);
+            StyleButton(lockRegionBtn);
             lockRegionBtn.OnClick = () => ExecuteCommand(string.Format(MessageService.BCCOM_ADMIN_REGION_LOCK, _regionInput.Text));
 
             var unlockRegionBtn = UIFactory.CreateButton(regionContainer, "UnlockRegionBtn", "Unlock Region");
             UIFactory.SetLayoutElement(unlockRegionBtn.GameObject, minHeight: 35, flexibleWidth: 9999);
+            StyleButton(unlockRegionBtn);
             unlockRegionBtn.OnClick = () => ExecuteCommand(string.Format(MessageService.BCCOM_ADMIN_REGION_UNLOCK, _regionInput.Text));
 
             CreateDivider();
@@ -171,6 +201,7 @@ namespace ZUI.UI.ModContent
 
             var giveItemBtn = UIFactory.CreateButton(_contentLayout, "GiveItemBtn", "Give Item");
             UIFactory.SetLayoutElement(giveItemBtn.GameObject, minHeight: 35, flexibleWidth: 9999);
+            StyleButton(giveItemBtn);
             giveItemBtn.OnClick = () =>
             {
                 var cmd = $".give {_itemPrefabInput.Text} {_itemAmountInput.Text}";
@@ -183,7 +214,7 @@ namespace ZUI.UI.ModContent
             npcLabel.TextMesh.fontSize = 11;
 
             CreateInputField("NPC GUID:", ref _npcGuidInput, "CHAR_Bandit_Bomber");
-            
+
             var npcParamsContainer = UIFactory.CreateHorizontalGroup(_contentLayout, "NpcParams", false, false, true, true, 5);
             UIFactory.SetLayoutElement(npcParamsContainer, minHeight: 30, flexibleWidth: 9999);
 
@@ -197,6 +228,7 @@ namespace ZUI.UI.ModContent
 
             var spawnNpcBtn = UIFactory.CreateButton(_contentLayout, "SpawnNpcBtn", "Spawn NPC");
             UIFactory.SetLayoutElement(spawnNpcBtn.GameObject, minHeight: 35, flexibleWidth: 9999);
+            StyleButton(spawnNpcBtn);
             spawnNpcBtn.OnClick = () =>
             {
                 var cmd = $".spawnnpc {_npcGuidInput.Text} {_npcAmountInput.Text} {_npcLevelInput.Text}";
@@ -206,7 +238,7 @@ namespace ZUI.UI.ModContent
 
         private void CreateMissingDependencyMessage(string dependencyName)
         {
-            var warningLabel = UIFactory.CreateLabel(_contentLayout, "MissingDependency", 
+            var warningLabel = UIFactory.CreateLabel(_contentLayout, "MissingDependency",
                 $"<color=#FF6B6B>? {dependencyName} Not Detected</color>\n\n" +
                 $"This feature requires the {dependencyName} mod to be installed on the server.\n\n" +
                 "Please contact your server administrator or install the required mod.",
@@ -247,6 +279,30 @@ namespace ZUI.UI.ModContent
             var input = UIFactory.CreateInputField(parent, name, placeholder);
             UIFactory.SetLayoutElement(input.GameObject, minHeight: 30, flexibleWidth: 9999);
             return input;
+        }
+
+        private void StyleButton(ButtonRef btn)
+        {
+            if (_btnNormalSprite == null) return;
+
+            var img = btn.GameObject.GetComponent<Image>();
+            if (img)
+            {
+                img.sprite = _btnNormalSprite;
+                img.type = Image.Type.Sliced;
+                img.color = Color.white;
+            }
+
+            if (_btnSelectedSprite != null)
+            {
+                var comp = btn.Component;
+                comp.transition = Selectable.Transition.SpriteSwap;
+                var state = comp.spriteState;
+                state.highlightedSprite = _btnSelectedSprite;
+                state.pressedSprite = _btnSelectedSprite;
+                state.selectedSprite = _btnSelectedSprite;
+                comp.spriteState = state;
+            }
         }
 
         private void ExecuteCommand(string command)

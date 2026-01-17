@@ -1,12 +1,15 @@
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
 using ZUI.Config;
 using ZUI.Services;
 using ZUI.UI.CustomLib.Panel;
 using ZUI.UI.CustomLib.Util;
 using ZUI.UI.ModContent.Data;
 using ZUI.UI.UniverseLib.UI;
+using ZUI.UI.UniverseLib.UI.Models;
 using ZUI.UI.UniverseLib.UI.Panels;
-using TMPro;
-using UnityEngine;
+using ZUI.Utils;
 
 namespace ZUI.UI.ModContent
 {
@@ -25,17 +28,44 @@ namespace ZUI.UI.ModContent
 
         private GameObject _contentLayout;
 
+        // Sprite Cache
+        private Sprite _btnNormalSprite;
+        private Sprite _btnSelectedSprite;
+
         public UserPanel(UIBase owner) : base(owner)
         {
         }
 
         protected override void ConstructPanelContent()
         {
+            // --- LOAD SPRITES ---
+            var panelSprite = SpriteLoader.LoadSprite("panel.png", 100f, new Vector4(30, 30, 30, 30));
+            _btnNormalSprite = SpriteLoader.LoadSprite("button.png", 100f, new Vector4(10, 10, 10, 10));
+            _btnSelectedSprite = SpriteLoader.LoadSprite("button_selected.png", 100f, new Vector4(10, 10, 10, 10));
+
+            // Apply Panel Background
+            if (panelSprite != null)
+            {
+                var bgImage = ContentRoot.GetComponent<Image>();
+                if (bgImage != null)
+                {
+                    bgImage.sprite = panelSprite;
+                    bgImage.type = Image.Type.Sliced;
+                    bgImage.color = Color.white;
+                }
+            }
+
             SetTitle("User Commands");
-            
-            _contentLayout = UIFactory.CreateVerticalGroup(ContentRoot, "ContentLayout", true, true, true, true, 6,
-                new Vector4(15, 15, 15, 15), new Color(0.1f, 0.1f, 0.1f, 0.95f));
-            UIFactory.SetLayoutElement(_contentLayout, flexibleWidth: 9999, flexibleHeight: 9999);
+
+            // --- CHANGE: Use ScrollView instead of VerticalGroup ---
+            // This provides the Scrollbar and the Mask (Viewport) to fix resizing issues.
+            var scrollView = UIFactory.CreateScrollView(ContentRoot, "UserScrollView", out _contentLayout, out var autoScroll,
+                new Color(0.05f, 0.05f, 0.05f, 0f)); // Transparent BG
+
+            UIFactory.SetLayoutElement(scrollView, flexibleWidth: 9999, flexibleHeight: 9999);
+
+            // Set up the layout group inside the scroll view content
+            UIFactory.SetLayoutGroup<VerticalLayoutGroup>(_contentLayout, false, false, true, true, 6, 15, 15, 15, 15);
 
             // Title
             var titleLabel = UIFactory.CreateLabel(_contentLayout, "Title", "Player Utilities", TextAlignmentOptions.Center);
@@ -94,7 +124,8 @@ namespace ZUI.UI.ModContent
             {
                 var btn = UIFactory.CreateButton(container, $"{buttonText}Btn", buttonText);
                 UIFactory.SetLayoutElement(btn.GameObject, minHeight: 32, flexibleWidth: 9999);
-                
+                StyleButton(btn); // Apply visual style
+
                 if (!enabled)
                 {
                     // Disable and gray out button
@@ -121,33 +152,28 @@ namespace ZUI.UI.ModContent
             UIFactory.SetLayoutElement(spacer, minHeight: 5);
         }
 
-        private void CreateSection(string sectionTitle, (string buttonText, string command, string tooltip)[] buttons)
+        private void StyleButton(ButtonRef btn)
         {
-            // Section title
-            var titleLabel = UIFactory.CreateLabel(_contentLayout, $"{sectionTitle}Label", sectionTitle, TextAlignmentOptions.Left);
-            UIFactory.SetLayoutElement(titleLabel.GameObject, minHeight: 25, flexibleWidth: 9999);
-            titleLabel.TextMesh.fontStyle = FontStyles.Bold;
-            titleLabel.TextMesh.fontSize = 13;
-            titleLabel.TextMesh.color = new Color(0.4f, 0.8f, 1f, 1f);
+            if (_btnNormalSprite == null) return;
 
-            // Buttons container
-            var container = UIFactory.CreateVerticalGroup(_contentLayout, $"{sectionTitle}Container", false, false, true, true, 3);
-            UIFactory.SetLayoutElement(container, flexibleWidth: 9999);
-
-            foreach (var (buttonText, command, tooltip) in buttons)
+            var img = btn.GameObject.GetComponent<Image>();
+            if (img)
             {
-                var btn = UIFactory.CreateButton(container, $"{buttonText}Btn", buttonText);
-                UIFactory.SetLayoutElement(btn.GameObject, minHeight: 32, flexibleWidth: 9999);
-                btn.OnClick = () =>
-                {
-                    MessageService.EnqueueMessage(command);
-                    Plugin.LogInstance.LogInfo($"User command: {command}");
-                };
+                img.sprite = _btnNormalSprite;
+                img.type = Image.Type.Sliced;
+                img.color = Color.white;
             }
 
-            // Spacing
-            var spacer = UIFactory.CreateUIObject("Spacer", _contentLayout);
-            UIFactory.SetLayoutElement(spacer, minHeight: 5);
+            if (_btnSelectedSprite != null)
+            {
+                var comp = btn.Component;
+                comp.transition = Selectable.Transition.SpriteSwap;
+                var state = comp.spriteState;
+                state.highlightedSprite = _btnSelectedSprite;
+                state.pressedSprite = _btnSelectedSprite;
+                state.selectedSprite = _btnSelectedSprite;
+                comp.spriteState = state;
+            }
         }
 
         protected override void OnClosePanelClicked()

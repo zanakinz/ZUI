@@ -6,6 +6,7 @@ using ZUI.UI.ModContent.Data;
 using ZUI.UI.UniverseLib.UI;
 using ZUI.UI.UniverseLib.UI.Models;
 using ZUI.UI.UniverseLib.UI.Panels;
+using ZUI.Utils;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -27,17 +28,44 @@ namespace ZUI.UI.ModContent
 
         private GameObject _contentLayout;
 
+        // Sprite Cache
+        private Sprite _btnNormalSprite;
+        private Sprite _btnSelectedSprite;
+
         public QuestsPanel(UIBase owner) : base(owner)
         {
         }
 
         protected override void ConstructPanelContent()
         {
+            // --- LOAD SPRITES ---
+            var panelSprite = SpriteLoader.LoadSprite("panel.png", 100f, new Vector4(30, 30, 30, 30));
+            _btnNormalSprite = SpriteLoader.LoadSprite("button.png", 100f, new Vector4(10, 10, 10, 10));
+            _btnSelectedSprite = SpriteLoader.LoadSprite("button_selected.png", 100f, new Vector4(10, 10, 10, 10));
+
+            // Apply Panel Background
+            if (panelSprite != null)
+            {
+                var bgImage = ContentRoot.GetComponent<Image>();
+                if (bgImage != null)
+                {
+                    bgImage.sprite = panelSprite;
+                    bgImage.type = Image.Type.Sliced;
+                    bgImage.color = Color.white;
+                }
+            }
+
             SetTitle("Quest Management");
-            
-            _contentLayout = UIFactory.CreateVerticalGroup(ContentRoot, "ContentLayout", true, true, true, true, 8,
-                new Vector4(15, 15, 15, 15), new Color(0.1f, 0.1f, 0.1f, 0.95f));
-            UIFactory.SetLayoutElement(_contentLayout, flexibleWidth: 9999, flexibleHeight: 9999);
+
+            // --- SCROLLVIEW SETUP ---
+            // Using a transparent background for the scroll view so the panel background shows through
+            var scrollView = UIFactory.CreateScrollView(ContentRoot, "QuestsScrollView", out _contentLayout, out var autoScroll,
+                new Color(0.05f, 0.05f, 0.05f, 0f));
+
+            UIFactory.SetLayoutElement(scrollView, flexibleWidth: 9999, flexibleHeight: 9999);
+
+            // Set up the layout group inside the scroll view content
+            UIFactory.SetLayoutGroup<VerticalLayoutGroup>(_contentLayout, false, false, true, true, 8, 15, 15, 15, 15);
 
             // Check for BloodCraft dependency
             if (!DependencyService.HasBloodCraft)
@@ -80,6 +108,7 @@ namespace ZUI.UI.ModContent
 
             var toggleBtn = UIFactory.CreateButton(_contentLayout, "ToggleLog", "Toggle Quest Logging");
             UIFactory.SetLayoutElement(toggleBtn.GameObject, minHeight: 35, flexibleWidth: 9999);
+            StyleButton(toggleBtn);
             toggleBtn.OnClick = () =>
             {
                 MessageService.EnqueueMessage(".quest log");
@@ -89,7 +118,7 @@ namespace ZUI.UI.ModContent
 
         private void CreateMissingDependencyMessage(string dependencyName)
         {
-            var warningLabel = UIFactory.CreateLabel(_contentLayout, "MissingDependency", 
+            var warningLabel = UIFactory.CreateLabel(_contentLayout, "MissingDependency",
                 $"<color=#FF6B6B>? {dependencyName} Not Detected</color>\n\n" +
                 $"This feature requires the {dependencyName} mod to be installed on the server.\n\n" +
                 "Please contact your server administrator or install the required mod.",
@@ -116,6 +145,7 @@ namespace ZUI.UI.ModContent
             {
                 var btn = UIFactory.CreateButton(container, $"{buttonText}Btn", buttonText);
                 UIFactory.SetLayoutElement(btn.GameObject, minHeight: 30, flexibleWidth: 9999);
+                StyleButton(btn); // Apply visual style
                 btn.OnClick = () =>
                 {
                     MessageService.EnqueueMessage(command);
@@ -126,6 +156,30 @@ namespace ZUI.UI.ModContent
             // Spacing
             var spacer = UIFactory.CreateUIObject("Spacer", _contentLayout);
             UIFactory.SetLayoutElement(spacer, minHeight: 5);
+        }
+
+        private void StyleButton(ButtonRef btn)
+        {
+            if (_btnNormalSprite == null) return;
+
+            var img = btn.GameObject.GetComponent<Image>();
+            if (img)
+            {
+                img.sprite = _btnNormalSprite;
+                img.type = Image.Type.Sliced;
+                img.color = Color.white;
+            }
+
+            if (_btnSelectedSprite != null)
+            {
+                var comp = btn.Component;
+                comp.transition = Selectable.Transition.SpriteSwap;
+                var state = comp.spriteState;
+                state.highlightedSprite = _btnSelectedSprite;
+                state.pressedSprite = _btnSelectedSprite;
+                state.selectedSprite = _btnSelectedSprite;
+                comp.spriteState = state;
+            }
         }
 
         protected override void OnClosePanelClicked()

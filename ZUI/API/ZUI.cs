@@ -1,29 +1,22 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 
 namespace ZUI.API
 {
-    /// <summary>
     /// Clean, simple API wrapper for external plugins to register buttons with ZUI or create Custom UI Windows.
     /// This is the recommended way to interact with ZUI from external plugins.
-    /// </summary>
     public static class ZUI
     {
         // ==============================================================================================
         // CONTEXT MANAGEMENT
         // ==============================================================================================
 
-        /// <summary>
-        /// Sets the plugin name context for subsequent registrations.
-        /// </summary>
         public static void SetPlugin(string pluginName)
         {
             ModRegistry.SetPlugin(pluginName);
         }
 
-        /// <summary>
-        /// (Advanced) Sets the active window context for the current plugin.
-        /// </summary>
         public static void SetTargetWindow(string windowId)
         {
             ModRegistry.SetTargetWindow(windowId);
@@ -38,26 +31,21 @@ namespace ZUI.API
         // CUSTOM UI CREATION
         // ==============================================================================================
 
-        /// <summary>
-        /// Initialize a Custom UI Window using a pre-defined template (Small, Medium, Large).
-        /// </summary>
         public static void SetUI(string templateName)
         {
             ModRegistry.SetUITemplate(templateName);
         }
 
-        /// <summary>
-        /// Initialize a Custom UI Window with specific dimensions.
-        /// </summary>
         public static void SetUI(int width, int height)
         {
             ModRegistry.SetUICustom(width, height);
         }
 
-        /// <summary>
-        /// Hides the standard top title bar (and its default close button). 
-        /// Use this if you want a cleaner look and plan to add your own Close Button via <see cref="AddCloseButton(string, float, float)"/>.
-        /// </summary>
+        public static void SetTitle(string title)
+        {
+            ModRegistry.SetWindowTitle(title);
+        }
+
         public static void HideTitleBar()
         {
             ModRegistry.HideTitleBar();
@@ -92,6 +80,20 @@ namespace ZUI.API
             return ModRegistry.AddButton(buttonText, command, "", x, y);
         }
 
+
+        public static bool AddButton(string buttonText, string command, float x, float y, float width, float height)
+        {
+            var assembly = Assembly.GetCallingAssembly();
+            // Pass null for imageName to trigger default styling
+            return ModRegistry.AddButton(assembly, buttonText, command, null, x, y, width, height);
+        }
+
+        public static bool AddButton(string buttonText, string command, string imageName, float x, float y, float width, float height)
+        {
+            var assembly = Assembly.GetCallingAssembly();
+            return ModRegistry.AddButton(assembly, buttonText, command, imageName, x, y, width, height);
+        }
+
         public static void AddText(string text)
         {
             ModRegistry.AddText(text);
@@ -102,21 +104,19 @@ namespace ZUI.API
             ModRegistry.AddText(text, x, y);
         }
 
-        // --- NEW: CLOSE BUTTONS ---
+        public static void AddImage(string imageName, float x, float y, float width, float height)
+        {
+            var assembly = Assembly.GetCallingAssembly();
+            ModRegistry.AddImage(assembly, imageName, x, y, width, height);
+        }
 
-        /// <summary>
-        /// Adds a button that closes the current window.
-        /// (Template Mode: Adds to button list)
-        /// </summary>
+        // --- CLOSE BUTTONS ---
+
         public static void AddCloseButton(string text = "Close")
         {
             ModRegistry.AddCloseButton(text, -1, -1);
         }
 
-        /// <summary>
-        /// Adds a button that closes the current window at a specific position.
-        /// (Canvas Mode: Perfect for custom 'X' buttons in the top right)
-        /// </summary>
         public static void AddCloseButton(string text, float x, float y)
         {
             ModRegistry.AddCloseButton(text, x, y);

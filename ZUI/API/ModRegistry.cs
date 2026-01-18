@@ -1,13 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using ZUI.UI.ModContent; // Required for CustomModPanel
+using System.Reflection;
+using ZUI.UI.ModContent;
 
 namespace ZUI.API
 {
-    /// <summary>
-    /// Public API for external mods to register custom buttons in ZUI's Mods menu or create custom UI windows.
-    /// </summary>
     public static class ModRegistry
     {
         // Legacy "List" Mode Storage
@@ -24,8 +22,8 @@ namespace ZUI.API
 
         // Context Tracking
         private static string _currentPlugin = null;
-        private static string _currentCategory = null; // Used for Legacy List Mode
-        private static string _currentWindowId = "Main"; // Used for Custom UI Mode
+        private static string _currentCategory = null;
+        private static string _currentWindowId = "Main";
 
         /// <summary>
         /// Called by ZUI.Plugin when the UI is fully initialized to process queued requests.
@@ -53,11 +51,6 @@ namespace ZUI.API
             }
         }
 
-        /// <summary>
-        /// Sets the plugin name context for subsequent button registrations.
-        /// All buttons registered after this call will be grouped under this plugin name.
-        /// </summary>
-        /// <param name="pluginName">The name of the plugin</param>
         public static void SetPlugin(string pluginName)
         {
             if (string.IsNullOrWhiteSpace(pluginName))
@@ -69,10 +62,10 @@ namespace ZUI.API
             lock (Lock)
             {
                 _currentPlugin = pluginName;
-                _currentCategory = null; // Reset category when switching plugins
-                _currentWindowId = "Main"; // Reset window ID to default
+                _currentCategory = null;
+                _currentWindowId = "Main";
 
-                // Create legacy plugin entry if it doesn't exist (ensures it shows up in Mods List if fallback occurs)
+                // Create legacy plugin entry if it doesn't exist
                 if (!RegisteredPlugins.Exists(p => p.PluginName.Equals(pluginName, StringComparison.OrdinalIgnoreCase)))
                 {
                     RegisteredPlugins.Add(new ModPlugin
@@ -80,80 +73,30 @@ namespace ZUI.API
                         PluginName = pluginName,
                         Categories = new List<ModCategory>()
                     });
-                    Plugin.LogInstance.LogInfo($"[ModRegistry] Registered plugin '{pluginName}'");
                 }
             }
         }
 
-        /// <summary>
-        /// Sets the specific Window ID context if a plugin has multiple custom windows.
-        /// Defaults to "Main" if not called.
-        /// </summary>
-        /// <param name="windowId">The unique identifier for the window</param>
         public static void SetTargetWindow(string windowId)
         {
-            if (string.IsNullOrWhiteSpace(windowId))
-            {
-                _currentWindowId = "Main";
-                return;
-            }
-            _currentWindowId = windowId;
+            _currentWindowId = string.IsNullOrWhiteSpace(windowId) ? "Main" : windowId;
         }
 
-        /// <summary>
-        /// Initializes a Custom UI Panel using a pre-defined template (Small, Medium, Large).
-        /// </summary>
         public static void SetUITemplate(string templateName)
         {
-            if (_currentPlugin == null)
-            {
-                Plugin.LogInstance.LogError("[ModRegistry] Cannot set UI: No plugin context set. Call SetPlugin() first.");
-                return;
-            }
-
-            // If UI isn't ready, queue this action
-            if (Plugin.UIManager == null || !Plugin.UIManager.IsInitialized)
-            {
-                QueueAction(() => SetUITemplate(templateName));
-                return;
-            }
-
+            if (CheckQueue(() => SetUITemplate(templateName))) return;
             EnsurePanelExists(_currentWindowId, templateName, -1, -1);
         }
 
-        /// <summary>
-        /// Initializes a Custom UI Panel with explicit dimensions.
-        /// </summary>
         public static void SetUICustom(int width, int height)
         {
-            if (_currentPlugin == null)
-            {
-                Plugin.LogInstance.LogError("[ModRegistry] Cannot set UI: No plugin context set. Call SetPlugin() first.");
-                return;
-            }
-
-            // If UI isn't ready, queue this action
-            if (Plugin.UIManager == null || !Plugin.UIManager.IsInitialized)
-            {
-                QueueAction(() => SetUICustom(width, height));
-                return;
-            }
-
+            if (CheckQueue(() => SetUICustom(width, height))) return;
             EnsurePanelExists(_currentWindowId, null, width, height);
         }
 
-        /// <summary>
-        /// Hides the standard title bar for the current custom window context.
-        /// </summary>
         public static void HideTitleBar()
         {
-            if (_currentPlugin == null) return;
-
-            if (Plugin.UIManager == null || !Plugin.UIManager.IsInitialized)
-            {
-                QueueAction(() => HideTitleBar());
-                return;
-            }
+            if (CheckQueue(() => HideTitleBar())) return;
 
             var panel = GetCurrentContextPanel();
             if (panel != null)
@@ -162,9 +105,36 @@ namespace ZUI.API
             }
         }
 
+        public static void SetWindowTitle(string title)
+        {
+            if (CheckQueue(() => SetWindowTitle(title))) return;
+
+            var panel = GetCurrentContextPanel();
+            if (panel != null)
+            {
+                panel.SetWindowTitle(title);
+            }
+        }
+
+        private static bool CheckQueue(Action action)
+        {
+            if (_currentPlugin == null)
+            {
+                Plugin.LogInstance.LogError("[ModRegistry] No plugin context set. Call SetPlugin() first.");
+                return true;
+            }
+
+            if (Plugin.UIManager == null || !Plugin.UIManager.IsInitialized)
+            {
+                QueueAction(action);
+                return true;
+            }
+            return false;
+        }
+
         private static void QueueAction(Action action)
         {
-            // Capture state variables for the closure to ensure context is preserved when the queue runs later
+            // Capture state variables for the closure
             string pName = _currentPlugin;
             string wId = _currentWindowId;
 
@@ -172,7 +142,6 @@ namespace ZUI.API
             {
                 _initQueue.Add(() =>
                 {
-                    // Restore context temporarily to ensure correct creation
                     string prevPlugin = _currentPlugin;
                     string prevWin = _currentWindowId;
 
@@ -185,7 +154,6 @@ namespace ZUI.API
                     }
                     finally
                     {
-                        // Restore previous state just in case
                         _currentPlugin = prevPlugin;
                         _currentWindowId = prevWin;
                     }
@@ -210,53 +178,36 @@ namespace ZUI.API
                     CustomModPanel newPanel;
                     if (!string.IsNullOrEmpty(template))
                     {
-                        // Template Mode
                         newPanel = new CustomModPanel(Plugin.UIManager.UiBase, _currentPlugin, windowId, template);
                     }
                     else
                     {
-                        // Custom Dimension Mode
                         newPanel = new CustomModPanel(Plugin.UIManager.UiBase, _currentPlugin, windowId, w, h);
                     }
 
-                    // IMPORTANT: Panel must be active initially so ConstructPanelContent() is called
-                    // This ensures _textScrollContent and _buttonScrollContent are created
+                    // Content creation requires panel to be effectively active momentarily
                     newPanel.SetActive(true);
-
-                    // Now immediately hide it - content is created but panel is invisible
                     newPanel.SetActive(false);
 
                     pluginPanels[windowId] = newPanel;
-
-                    // --- REGISTER WITH UIMANAGER FOR VISIBILITY CONTROL ---
-                    // This ensures the panel hides when ESC menu opens, map opens, etc.
                     Plugin.UIManager.RegisterPanel(newPanel);
 
-                    // --- AUTO-GENERATE OPEN BUTTON ---
-                    // This creates a button in the main "Mods" list to open this custom window
-                    // We access Legacy logic directly here to bypass the "Is Custom Panel Active" check
-
-                    // Ensure the category exists
+                    // Auto-generate button in Legacy Menu to open this window
                     LegacyAddCategory("Windows");
-
                     string btnText = windowId == "Main" ? $"Open {_currentPlugin} UI" : $"Open {windowId}";
 
-                    // We use the internal AddButtonWithCallback logic but purely for the legacy list
                     LegacyAddButtonWithCallback(btnText, () =>
                     {
-                        // Callback to open the panel
                         if (pluginPanels.TryGetValue(windowId, out var p) && p != null)
                         {
                             p.SetActive(true);
-                            // Bring to front
                             p.UIRoot.transform.SetAsLastSibling();
                         }
                     }, "Opens the custom window");
-
-                    Plugin.LogInstance.LogInfo($"[ModRegistry] Created Custom Panel '{windowId}' for '{_currentPlugin}' (Hidden by default)");
                 }
             }
         }
+
         private static CustomModPanel GetCurrentContextPanel()
         {
             if (_currentPlugin == null) return null;
@@ -272,50 +223,33 @@ namespace ZUI.API
             return null;
         }
 
-        /// <summary>
-        /// Adds a category. If a custom UI is active, adds it to the UI. Otherwise adds to the Mods menu.
-        /// </summary>
+        // ==============================================================================================
+        // CONTENT REGISTRATION METHODS
+        // ==============================================================================================
+
         public static void AddCategory(string categoryName, float x = -1, float y = -1)
         {
-            if (string.IsNullOrWhiteSpace(categoryName)) return;
-
-            // Queueing logic
-            if (Plugin.UIManager == null || !Plugin.UIManager.IsInitialized)
-            {
-                // Only queue if we suspect a UI creation is pending, essentially always queue if UI isn't ready
-                QueueAction(() => AddCategory(categoryName, x, y));
-                return;
-            }
+            if (CheckQueue(() => AddCategory(categoryName, x, y))) return;
 
             var panel = GetCurrentContextPanel();
             if (panel != null)
             {
-                // Custom UI Mode
                 panel.AddCategory(categoryName, x, y);
             }
             else
             {
-                // Legacy Mode
                 LegacyAddCategory(categoryName);
             }
         }
 
-        /// <summary>
-        /// Adds text to the UI. Only works in Custom UI mode.
-        /// </summary>
         public static void AddText(string text, float x = -1, float y = -1)
         {
-            // Queueing logic
-            if (Plugin.UIManager == null || !Plugin.UIManager.IsInitialized)
-            {
-                QueueAction(() => AddText(text, x, y));
-                return;
-            }
+            if (CheckQueue(() => AddText(text, x, y))) return;
 
             var panel = GetCurrentContextPanel();
             if (panel != null)
             {
-                // We use the text itself as part of the ID hash for tracking
+                // Use hash code to generate semi-unique ID for text blocks
                 string id = $"txt_{text.GetHashCode()}";
                 panel.AddText(id, text, x, y);
             }
@@ -325,44 +259,62 @@ namespace ZUI.API
             }
         }
 
-        /// <summary>
-        /// Registers a button. If a custom UI is active, adds it to the UI. Otherwise adds to the Mods menu.
-        /// </summary>
-        public static bool AddButton(string buttonText, string command, string tooltip = "", float x = -1, float y = -1)
+        public static void AddImage(Assembly assembly, string imageName, float x, float y, float w, float h)
         {
-            // Queueing logic
-            if (Plugin.UIManager == null || !Plugin.UIManager.IsInitialized)
-            {
-                QueueAction(() => AddButton(buttonText, command, tooltip, x, y));
-                return true;
-            }
+            if (CheckQueue(() => AddImage(assembly, imageName, x, y, w, h))) return;
 
             var panel = GetCurrentContextPanel();
             if (panel != null)
             {
-                // Custom UI Mode
+                string id = $"img_{imageName}_{x}_{y}";
+                panel.AddImage(id, assembly, imageName, x, y, w, h);
+            }
+            else
+            {
+                Plugin.LogInstance.LogWarning("[ModRegistry] AddImage called without a Custom UI context.");
+            }
+        }
+
+        // Standard Button
+        public static bool AddButton(string buttonText, string command, string tooltip = "", float x = -1, float y = -1)
+        {
+            if (CheckQueue(() => AddButton(buttonText, command, tooltip, x, y))) return true;
+
+            var panel = GetCurrentContextPanel();
+            if (panel != null)
+            {
                 string id = $"btn_{buttonText}";
                 panel.AddButton(id, buttonText, command, x, y);
                 return true;
             }
             else
             {
-                // Legacy Mode
                 return LegacyAddButton(buttonText, command, tooltip);
             }
         }
 
-        /// <summary>
-        /// Registers a close button. Only works in Custom UI mode.
-        /// </summary>
+        // Custom Image Button Overload
+        public static bool AddButton(Assembly assembly, string buttonText, string command, string imageName, float x, float y, float w, float h)
+        {
+            if (CheckQueue(() => AddButton(assembly, buttonText, command, imageName, x, y, w, h))) return true;
+
+            var panel = GetCurrentContextPanel();
+            if (panel != null)
+            {
+                string id = $"btn_{buttonText}";
+                panel.AddButton(id, assembly, buttonText, command, imageName, x, y, w, h);
+                return true;
+            }
+            else
+            {
+                // Fallback to legacy if no custom panel (will ignore image/size)
+                return LegacyAddButton(buttonText, command, "");
+            }
+        }
+
         public static void AddCloseButton(string text, float x = -1, float y = -1)
         {
-            // Queueing logic
-            if (Plugin.UIManager == null || !Plugin.UIManager.IsInitialized)
-            {
-                QueueAction(() => AddCloseButton(text, x, y));
-                return;
-            }
+            if (CheckQueue(() => AddCloseButton(text, x, y))) return;
 
             var panel = GetCurrentContextPanel();
             if (panel != null)
@@ -376,22 +328,13 @@ namespace ZUI.API
             }
         }
 
-        /// <summary>
-        /// Registers a button with a direct callback. 
-        /// </summary>
         public static bool AddButtonWithCallback(string buttonText, Action onClick, string tooltip = "")
         {
-            // Queueing logic
-            if (Plugin.UIManager == null || !Plugin.UIManager.IsInitialized)
-            {
-                QueueAction(() => AddButtonWithCallback(buttonText, onClick, tooltip));
-                return true;
-            }
+            if (CheckQueue(() => AddButtonWithCallback(buttonText, onClick, tooltip))) return true;
 
             var panel = GetCurrentContextPanel();
             if (panel != null)
             {
-                // Basic support for callbacks in Custom UI
                 string id = $"btn_{buttonText}";
                 // Use -1, -1 for template positioning
                 panel.AddButtonWithCallback(id, buttonText, onClick, -1, -1);
@@ -401,249 +344,19 @@ namespace ZUI.API
             return LegacyAddButtonWithCallback(buttonText, onClick, tooltip);
         }
 
-        /// <summary>
-        /// Removes a button or element. Checks Custom UI first, then Legacy.
-        /// </summary>
         public static bool RemoveButton(string buttonText)
         {
             var panel = GetCurrentContextPanel();
             if (panel != null)
             {
-                // Try removing as button
                 panel.RemoveElement($"btn_{buttonText}");
-                // Try removing as category or text if the user passed that ID
                 panel.RemoveElement(buttonText);
                 return true;
             }
 
-            // Fallback to Legacy
             return LegacyRemoveButton(buttonText);
         }
 
-        // ==============================================================================================
-        // LEGACY IMPLEMENTATIONS (Original Logic)
-        // ==============================================================================================
-
-        private static void LegacyAddCategory(string categoryName)
-        {
-            if (string.IsNullOrWhiteSpace(categoryName))
-            {
-                Plugin.LogInstance.LogError("[ModRegistry] Category name cannot be null or empty.");
-                return;
-            }
-
-            if (_currentPlugin == null)
-            {
-                Plugin.LogInstance.LogError("[ModRegistry] Cannot add category: No plugin context set. Call SetPlugin() first.");
-                return;
-            }
-
-            lock (Lock)
-            {
-                _currentCategory = categoryName;
-
-                var plugin = RegisteredPlugins.FirstOrDefault(p =>
-                    p.PluginName.Equals(_currentPlugin, StringComparison.OrdinalIgnoreCase));
-
-                if (plugin != null && !plugin.Categories.Exists(c =>
-                    c.CategoryName.Equals(categoryName, StringComparison.OrdinalIgnoreCase)))
-                {
-                    plugin.Categories.Add(new ModCategory
-                    {
-                        CategoryName = categoryName,
-                        Buttons = new List<ModButton>()
-                    });
-                }
-            }
-        }
-
-        private static bool LegacyAddButton(string buttonText, string command, string tooltip = "")
-        {
-            if (string.IsNullOrWhiteSpace(buttonText))
-            {
-                Plugin.LogInstance.LogError("[ModRegistry] Button text cannot be null or empty.");
-                return false;
-            }
-
-            if (string.IsNullOrWhiteSpace(command))
-            {
-                Plugin.LogInstance.LogError("[ModRegistry] Command cannot be null or empty.");
-                return false;
-            }
-
-            if (_currentPlugin == null)
-            {
-                Plugin.LogInstance.LogError("[ModRegistry] Cannot add button: No plugin context set. Call SetPlugin() first.");
-                return false;
-            }
-
-            lock (Lock)
-            {
-                var plugin = RegisteredPlugins.FirstOrDefault(p =>
-                    p.PluginName.Equals(_currentPlugin, StringComparison.OrdinalIgnoreCase));
-
-                if (plugin == null)
-                {
-                    Plugin.LogInstance.LogError($"[ModRegistry] Plugin '{_currentPlugin}' not found.");
-                    return false;
-                }
-
-                // If no category is set, create a default "Uncategorized" category
-                if (_currentCategory == null)
-                {
-                    _currentCategory = "Commands";
-                    if (!plugin.Categories.Exists(c => c.CategoryName == "Commands"))
-                    {
-                        plugin.Categories.Add(new ModCategory
-                        {
-                            CategoryName = "Commands",
-                            Buttons = new List<ModButton>()
-                        });
-                    }
-                }
-
-                var category = plugin.Categories.FirstOrDefault(c =>
-                    c.CategoryName.Equals(_currentCategory, StringComparison.OrdinalIgnoreCase));
-
-                if (category == null)
-                {
-                    Plugin.LogInstance.LogError($"[ModRegistry] Category '{_currentCategory}' not found in plugin '{_currentPlugin}'.");
-                    return false;
-                }
-
-                // Check for duplicates within this category
-                if (category.Buttons.Exists(b => b.ButtonText.Equals(buttonText, StringComparison.OrdinalIgnoreCase)))
-                {
-                    Plugin.LogInstance.LogWarning($"[ModRegistry] Button '{buttonText}' already exists in category '{_currentCategory}'.");
-                    return false;
-                }
-
-                var button = new ModButton
-                {
-                    ButtonText = buttonText,
-                    Command = command,
-                    Tooltip = tooltip,
-                    OnClick = null,
-                    RegisteredAt = DateTime.UtcNow
-                };
-
-                category.Buttons.Add(button);
-
-                // Notify listeners that buttons have changed
-                OnButtonsChanged?.Invoke();
-                return true;
-            }
-        }
-
-        private static bool LegacyAddButtonWithCallback(string buttonText, Action onClick, string tooltip = "")
-        {
-            if (string.IsNullOrWhiteSpace(buttonText))
-            {
-                Plugin.LogInstance.LogError("[ModRegistry] Button text cannot be null or empty.");
-                return false;
-            }
-
-            if (onClick == null)
-            {
-                Plugin.LogInstance.LogError("[ModRegistry] onClick callback cannot be null.");
-                return false;
-            }
-
-            if (_currentPlugin == null)
-            {
-                Plugin.LogInstance.LogError("[ModRegistry] Cannot add button: No plugin context set. Call SetPlugin() first.");
-                return false;
-            }
-
-            lock (Lock)
-            {
-                var plugin = RegisteredPlugins.FirstOrDefault(p =>
-                    p.PluginName.Equals(_currentPlugin, StringComparison.OrdinalIgnoreCase));
-
-                if (plugin == null)
-                {
-                    Plugin.LogInstance.LogError($"[ModRegistry] Plugin '{_currentPlugin}' not found.");
-                    return false;
-                }
-
-                if (_currentCategory == null)
-                {
-                    _currentCategory = "Commands";
-                    if (!plugin.Categories.Exists(c => c.CategoryName == "Commands"))
-                    {
-                        plugin.Categories.Add(new ModCategory
-                        {
-                            CategoryName = "Commands",
-                            Buttons = new List<ModButton>()
-                        });
-                    }
-                }
-
-                var category = plugin.Categories.FirstOrDefault(c =>
-                    c.CategoryName.Equals(_currentCategory, StringComparison.OrdinalIgnoreCase));
-
-                if (category == null)
-                {
-                    Plugin.LogInstance.LogError($"[ModRegistry] Category '{_currentCategory}' not found in plugin '{_currentPlugin}'.");
-                    return false;
-                }
-
-                if (category.Buttons.Exists(b => b.ButtonText.Equals(buttonText, StringComparison.OrdinalIgnoreCase)))
-                {
-                    Plugin.LogInstance.LogWarning($"[ModRegistry] Button '{buttonText}' already exists in category '{_currentCategory}'.");
-                    return false;
-                }
-
-                var button = new ModButton
-                {
-                    ButtonText = buttonText,
-                    Command = null,
-                    Tooltip = tooltip,
-                    OnClick = onClick,
-                    RegisteredAt = DateTime.UtcNow
-                };
-
-                category.Buttons.Add(button);
-                OnButtonsChanged?.Invoke();
-                return true;
-            }
-        }
-
-        private static bool LegacyRemoveButton(string buttonText)
-        {
-            if (string.IsNullOrWhiteSpace(buttonText) || _currentPlugin == null)
-                return false;
-
-            lock (Lock)
-            {
-                var plugin = RegisteredPlugins.FirstOrDefault(p =>
-                    p.PluginName.Equals(_currentPlugin, StringComparison.OrdinalIgnoreCase));
-
-                if (plugin == null)
-                    return false;
-
-                bool removed = false;
-                foreach (var category in plugin.Categories)
-                {
-                    removed |= category.Buttons.RemoveAll(b =>
-                        b.ButtonText.Equals(buttonText, StringComparison.OrdinalIgnoreCase)) > 0;
-                }
-
-                if (removed)
-                {
-                    Plugin.LogInstance.LogInfo($"[ModRegistry] Removed button '{buttonText}' from plugin '{_currentPlugin}'");
-                    OnButtonsChanged?.Invoke();
-                }
-
-                return removed;
-            }
-        }
-
-        /// <summary>
-        /// Removes an entire plugin and all its categories/buttons AND Custom Panels.
-        /// </summary>
-        /// <param name="pluginName">The plugin name to remove</param>
-        /// <returns>True if removed, false if not found</returns>
         public static bool RemovePlugin(string pluginName)
         {
             if (string.IsNullOrWhiteSpace(pluginName))
@@ -690,42 +403,148 @@ namespace ZUI.API
             }
         }
 
-        /// <summary>
-        /// Gets all registered plugins with their categories and buttons.
-        /// </summary>
-        /// <returns>Read-only list of registered plugins</returns>
-        public static IReadOnlyList<ModPlugin> GetPlugins()
+        // ==============================================================================================
+        // LEGACY IMPLEMENTATIONS (Original Logic)
+        // ==============================================================================================
+
+        private static void LegacyAddCategory(string categoryName)
         {
+            if (string.IsNullOrWhiteSpace(categoryName)) return;
+            if (_currentPlugin == null) return;
+
             lock (Lock)
             {
-                return RegisteredPlugins.AsReadOnly();
+                _currentCategory = categoryName;
+
+                var plugin = RegisteredPlugins.FirstOrDefault(p =>
+                    p.PluginName.Equals(_currentPlugin, StringComparison.OrdinalIgnoreCase));
+
+                if (plugin != null && !plugin.Categories.Exists(c =>
+                    c.CategoryName.Equals(categoryName, StringComparison.OrdinalIgnoreCase)))
+                {
+                    plugin.Categories.Add(new ModCategory
+                    {
+                        CategoryName = categoryName,
+                        Buttons = new List<ModButton>()
+                    });
+                }
             }
         }
 
-        /// <summary>
-        /// Legacy method for backward compatibility. Returns a flat list of all buttons.
-        /// </summary>
-        /// <returns>Read-only list of all registered buttons</returns>
-        [Obsolete("Use GetPlugins() for better organization. This method will be removed in a future version.")]
-        public static IReadOnlyList<ModButton> GetButtons()
+        private static bool LegacyAddButton(string buttonText, string command, string tooltip = "")
         {
             lock (Lock)
             {
-                var allButtons = new List<ModButton>();
-                foreach (var plugin in RegisteredPlugins)
+                var plugin = RegisteredPlugins.FirstOrDefault(p =>
+                    p.PluginName.Equals(_currentPlugin, StringComparison.OrdinalIgnoreCase));
+
+                if (plugin == null) return false;
+
+                if (_currentCategory == null)
                 {
-                    foreach (var category in plugin.Categories)
+                    _currentCategory = "Commands";
+                    if (!plugin.Categories.Exists(c => c.CategoryName == "Commands"))
                     {
-                        allButtons.AddRange(category.Buttons);
+                        plugin.Categories.Add(new ModCategory
+                        {
+                            CategoryName = "Commands",
+                            Buttons = new List<ModButton>()
+                        });
                     }
                 }
-                return allButtons.AsReadOnly();
+
+                var category = plugin.Categories.FirstOrDefault(c =>
+                    c.CategoryName.Equals(_currentCategory, StringComparison.OrdinalIgnoreCase));
+
+                if (category == null) return false;
+
+                if (category.Buttons.Exists(b => b.ButtonText.Equals(buttonText, StringComparison.OrdinalIgnoreCase)))
+                    return false;
+
+                var button = new ModButton
+                {
+                    ButtonText = buttonText,
+                    Command = command,
+                    Tooltip = tooltip,
+                    OnClick = null,
+                    RegisteredAt = DateTime.UtcNow
+                };
+
+                category.Buttons.Add(button);
+                OnButtonsChanged?.Invoke();
+                return true;
             }
         }
 
-        /// <summary>
-        /// Clears all registered plugins, categories, and buttons. Use with caution.
-        /// </summary>
+        private static bool LegacyAddButtonWithCallback(string buttonText, Action onClick, string tooltip = "")
+        {
+            lock (Lock)
+            {
+                var plugin = RegisteredPlugins.FirstOrDefault(p =>
+                    p.PluginName.Equals(_currentPlugin, StringComparison.OrdinalIgnoreCase));
+
+                if (plugin == null) return false;
+
+                if (_currentCategory == null)
+                {
+                    _currentCategory = "Commands";
+                    if (!plugin.Categories.Exists(c => c.CategoryName == "Commands"))
+                    {
+                        plugin.Categories.Add(new ModCategory
+                        {
+                            CategoryName = "Commands",
+                            Buttons = new List<ModButton>()
+                        });
+                    }
+                }
+
+                var category = plugin.Categories.FirstOrDefault(c =>
+                    c.CategoryName.Equals(_currentCategory, StringComparison.OrdinalIgnoreCase));
+
+                if (category == null) return false;
+
+                if (category.Buttons.Exists(b => b.ButtonText.Equals(buttonText, StringComparison.OrdinalIgnoreCase)))
+                    return false;
+
+                var button = new ModButton
+                {
+                    ButtonText = buttonText,
+                    Command = null,
+                    Tooltip = tooltip,
+                    OnClick = onClick,
+                    RegisteredAt = DateTime.UtcNow
+                };
+
+                category.Buttons.Add(button);
+                OnButtonsChanged?.Invoke();
+                return true;
+            }
+        }
+
+        private static bool LegacyRemoveButton(string buttonText)
+        {
+            if (string.IsNullOrWhiteSpace(buttonText) || _currentPlugin == null)
+                return false;
+
+            lock (Lock)
+            {
+                var plugin = RegisteredPlugins.FirstOrDefault(p =>
+                    p.PluginName.Equals(_currentPlugin, StringComparison.OrdinalIgnoreCase));
+
+                if (plugin == null) return false;
+
+                bool removed = false;
+                foreach (var category in plugin.Categories)
+                {
+                    removed |= category.Buttons.RemoveAll(b =>
+                        b.ButtonText.Equals(buttonText, StringComparison.OrdinalIgnoreCase)) > 0;
+                }
+
+                if (removed) OnButtonsChanged?.Invoke();
+                return removed;
+            }
+        }
+
         public static void ClearAll()
         {
             lock (Lock)
@@ -733,7 +552,6 @@ namespace ZUI.API
                 RegisteredPlugins.Clear();
                 _initQueue.Clear();
 
-                // Clear Custom Panels
                 foreach (var plugin in CustomPanels)
                 {
                     foreach (var win in plugin.Value)
@@ -756,32 +574,28 @@ namespace ZUI.API
             }
         }
 
-        /// <summary>
-        /// Event fired when buttons are added or removed.
-        /// </summary>
+        public static IReadOnlyList<ModPlugin> GetPlugins()
+        {
+            lock (Lock)
+            {
+                return RegisteredPlugins.AsReadOnly();
+            }
+        }
+
         public static event Action OnButtonsChanged;
 
-        /// <summary>
-        /// Represents a registered plugin with its categories.
-        /// </summary>
         public class ModPlugin
         {
             public string PluginName { get; set; }
             public List<ModCategory> Categories { get; set; }
         }
 
-        /// <summary>
-        /// Represents a category within a plugin.
-        /// </summary>
         public class ModCategory
         {
             public string CategoryName { get; set; }
             public List<ModButton> Buttons { get; set; }
         }
 
-        /// <summary>
-        /// Represents a registered mod button.
-        /// </summary>
         public class ModButton
         {
             public string ButtonText { get; set; }

@@ -9,7 +9,7 @@ using ZUI.UI.UniverseLib.UI.Models;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using ZUI.Utils; // Added for SpriteLoader
+using ZUI.Utils;
 using ButtonRef = ZUI.UI.UniverseLib.UI.Models.ButtonRef;
 using Object = UnityEngine.Object;
 
@@ -216,38 +216,41 @@ public abstract class PanelBase : UIBehaviourModel, IPanelBase
         UIFactory.SetLayoutElement(ContentRoot, 0, 0, flexibleWidth: 9999, flexibleHeight: 9999);
 
         // Title bar
+        // Set padding to balanced (2,2,2,2)
         TitleBar = UIFactory.CreateHorizontalGroup(ContentRoot, "TitleBar", false, true, true, true, 2,
             new Vector4(2, 2, 2, 2), Theme.PanelBackground);
         UIFactory.SetLayoutElement(TitleBar, minHeight: 25, flexibleHeight: 0);
 
+        // --- LEFT SPACER FOR CENTERING ---
+        // Adds an invisible 30px spacer on the left to balance the 30px close button on the right.
+        var spacer = UIFactory.CreateUIObject("CenteringSpacer", TitleBar);
+        UIFactory.SetLayoutElement(spacer, minHeight: 25, minWidth: 30, flexibleWidth: 0);
+
         // Title text
         TitleLabel = UIFactory.CreateLabel(TitleBar, "TitleBar", PanelId, TextAlignmentOptions.Center, Theme.DefaultText, outlineWidth: 0.05f, fontSize: 16);
-        UIFactory.SetLayoutElement(TitleLabel.GameObject, 50, 25, 9999, 0);
+        UIFactory.SetLayoutElement(TitleLabel.GameObject, 50, 25, 9999, 0); // Flexible width fills the center
 
         // close button
         CloseButton = UIFactory.CreateUIObject("CloseHolder", TitleBar);
-        UIFactory.SetLayoutElement(CloseButton, minHeight: 25, flexibleHeight: 0, minWidth: 30, flexibleWidth: 9999);
+        // Changed flexibleWidth to 0 to prevent it from eating title space, fixed width 30 matches spacer.
+        UIFactory.SetLayoutElement(CloseButton, minHeight: 25, flexibleHeight: 0, minWidth: 30, flexibleWidth: 0);
         UIFactory.SetLayoutGroup<HorizontalLayoutGroup>(CloseButton, false, false, true, true, 3, childAlignment: TextAnchor.MiddleRight);
 
-        ButtonRef closeBtn = UIFactory.CreateButton(CloseButton, "CloseButton", "—"); // Default placeholder
+        ButtonRef closeBtn = UIFactory.CreateButton(CloseButton, "CloseButton", "—");
         Object.Destroy(closeBtn.Component.gameObject.GetComponent<Outline>());
         UIFactory.SetLayoutElement(closeBtn.Component.gameObject, minHeight: 25, minWidth: 25, flexibleWidth: 0);
 
         // --- CUSTOM CLOSE BUTTON LOGIC ---
-        // Attempt to load the custom sprite from ZUI assembly
         var closeSprite = SpriteLoader.LoadSpriteFromAssembly(typeof(Plugin).Assembly, "close_button.png", 100f);
 
         if (closeSprite != null)
         {
-            // IMAGE FOUND
             var img = closeBtn.Component.GetComponent<Image>();
             img.sprite = closeSprite;
             img.color = Color.white;
 
-            // Clear text
             closeBtn.ButtonText.text = "";
 
-            // Neutral colors for sprite mode
             var colors = closeBtn.Component.colors;
             colors.normalColor = Color.white;
             colors.highlightedColor = new Color(0.9f, 0.9f, 0.9f, 1f);
@@ -256,10 +259,9 @@ public abstract class PanelBase : UIBehaviourModel, IPanelBase
         }
         else
         {
-            // FALLBACK: Red "X" Style
             closeBtn.ButtonText.text = "X";
             var colors = closeBtn.Component.colors;
-            colors.normalColor = new Color(0.8f, 0.2f, 0.2f, 1f); // Red
+            colors.normalColor = new Color(0.8f, 0.2f, 0.2f, 1f);
             colors.highlightedColor = new Color(1f, 0.3f, 0.3f, 1f);
             colors.pressedColor = new Color(0.6f, 0.1f, 0.1f, 1f);
             closeBtn.Component.colors = colors;
@@ -297,8 +299,6 @@ public abstract class PanelBase : UIBehaviourModel, IPanelBase
 
     public override void Update()
     {
-        // Close on Escape if this panel is active and top-most or focused
-        // For simplicity, if any panel is active and Escape is pressed, we close it if it's not the Base panel.
         if (Enabled && Input.GetKeyDown(KeyCode.Escape))
         {
             if (PanelType != PanelType.Base)

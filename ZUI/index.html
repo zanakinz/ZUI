@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZUI Custom Canvas Designer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a1a;
+            color: #e0e0e0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: #2a2a2a;
+            padding: 15px 20px;
+            border-bottom: 2px solid #3a3a3a;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            color: #fff;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            font-size: 14px;
+            color: #888;
+        }
+
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 300px;
+            background: #2a2a2a;
+            border-right: 2px solid #3a3a3a;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .sidebar h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #fff;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+            color: #aaa;
+        }
+
+        .control-group input[type="color"] {
+            width: 100%;
+            height: 40px;
+            padding: 2px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            cursor: pointer;
+            background: transparent;
+        }
+        
+        .control-group input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 0;
+        }
+        
+        .control-group input[type="color"]::-webkit-color-swatch {
+            border: none;
+            border-radius: 3px;
+        }
+
+        .control-group input:not([type="color"]),
+        .control-group select {
+            width: 100%;
+            padding: 8px;
+            background: #1a1a1a;
+            border: 1px solid #444;
+            color: #e0e0e0;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .control-group textarea {
+            width: 100%;
+            padding: 8px;
+            background: #1a1a1a;
+            border: 1px solid #444;
+            color: #e0e0e0;
+            border-radius: 4px;
+            font-size: 14px;
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 10px;
+            background: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        .btn:hover {
+            background: #357abd;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+
+        .btn-success {
+            background: #27ae60;
+            margin-top: 10px;
+        }
+
+        .btn-success:hover {
+            background: #229954;
+        }
+
+        .canvas-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #1a1a1a;
+            padding: 20px;
+            overflow: hidden;
+            gap: 20px;
+        }
+
+        .canvas-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
+        .canvas-settings {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .canvas-settings label {
+            color: #aaa;
+            font-size: 14px;
+        }
+
+        .canvas-settings input[type="number"] {
+            width: 80px;
+            padding: 5px;
+            background: #2a2a2a;
+            border: 1px solid #444;
+            color: #e0e0e0;
+            border-radius: 4px;
+        }
+
+        .canvas-settings input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .canvas-wrapper {
+            position: relative;
+            background: #2a2a2a;
+            border: 2px solid #444;
+            overflow: auto;
+            margin: 0 auto;
+            flex: 1;
+            width: 100%;
+            display: flex;
+            align-items: flex-start;
+            justify-content: flex-start;
+            padding: 20px;
+        }
+
+        .canvas {
+            position: relative;
+            background: url('Images/panel.png');
+            background-size: 100% 100%;
+            border: 1px solid #555;
+            flex-shrink: 0;
+            overflow: visible;
+        }
+
+        .element {
+            position: absolute;
+            border: 2px solid transparent;
+            cursor: move;
+            transition: border-color 0.2s;
+            user-select: none;
+        }
+
+        .element:hover {
+            border-color: #4a90e2;
+        }
+
+        .element.selected {
+            border-color: #e74c3c;
+            z-index: 1000;
+        }
+
+        .element.title-locked {
+            cursor: not-allowed;
+        }
+
+        .element.title-locked:hover {
+            border-color: #666;
+        }
+
+        .element-text {
+            padding: 5px;
+            color: #e0e0e0;
+            font-size: 14px;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        .element-button {
+            padding: 8px 16px;
+            background: url('Images/button.png');
+            background-size: 100% 100%;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        .element-title {
+            padding: 5px 10px;
+            color: #ffffff;
+            font-weight: bold;
+            font-size: 17px;
+            text-align: center;
+            position: relative;
+            top: -3px;
+        }
+
+        .element-category {
+            padding: 8px;
+            color: #ffd700;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .element-image {
+            background: #555;
+            border: 1px dashed #888;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #aaa;
+            font-size: 12px;
+            text-align: center;
+            padding: 5px;
+            width: 100%;
+            height: 100%;
+            box-sizing: border-box;
+        }
+
+        .elements-list {
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .element-item {
+            background: #1a1a1a;
+            padding: 10px;
+            margin-bottom: 5px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+        }
+
+        .element-item-info {
+            flex: 1;
+        }
+
+        .element-item-type {
+            color: #4a90e2;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+
+        .element-item-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .btn-small {
+            padding: 5px 10px;
+            background: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .btn-small:hover {
+            background: #357abd;
+        }
+
+        .btn-small.danger {
+            background: #e74c3c;
+        }
+
+        .btn-small.danger:hover {
+            background: #c0392b;
+        }
+
+        .code-output {
+            background: #1a1a1a;
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+
+        .code-output pre {
+            color: #e0e0e0;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .grid-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            background-image: 
+                repeating-linear-gradient(0deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 20px),
+                repeating-linear-gradient(90deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 20px);
+        }
+
+        .resize-handle {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #e74c3c;
+            border: 1px solid white;
+            bottom: -5px;
+            right: -5px;
+            cursor: nwse-resize;
+            display: none;
+        }
+
+        .element.selected .resize-handle {
+            display: block;
+        }
+
+        .coord-display {
+            position: absolute;
+            top: -20px;
+            left: 0;
+            background: rgba(0,0,0,0.8);
+            color: #4a90e2;
+            padding: 2px 6px;
+            font-size: 11px;
+            border-radius: 3px;
+            white-space: nowrap;
+            pointer-events: none;
+            display: none;
+        }
+
+        .element.selected .coord-display {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>ZUI Custom Canvas Designer</h1>
+        <p>Design your custom UI layout visually - drag, resize, and export C# code</p>
+    </div>
+
+    <div class="main-container">
+        <div class="sidebar">
+            <h2>Add Element</h2>
+            
+            <div class="control-group">
+                <label>Element Type</label>
+                <select id="elementType">
+                    <option value="title">Title</option>
+                    <option value="text">Text</option>
+                    <option value="button">Button</option>
+                    <option value="category">Category</option>
+                    <option value="image">Image</option>
+                </select>
+            </div>
+
+            <div class="control-group" id="titleGroup">
+                <label>Title Text</label>
+                <input type="text" id="titleText" placeholder="My Title" value="My Title">
+            </div>
+
+            <div class="control-group" id="titleColorGroup">
+                <label>Title Color</label>
+                <input type="color" id="titleColor" value="#ffffff">
+                <small style="color: #666; display: block; margin-top: 5px;">Title is displayed at top of panel (not positioned on canvas)</small>
+            </div>
+
+            <div class="control-group" id="textGroup" style="display:none;">
+                <label>Text Content</label>
+                <textarea id="textContent" placeholder="Enter text content..." maxlength="64">Welcome to my custom UI!</textarea>
+                <small style="color: #666; display: block; margin-top: 5px;">Max 64 characters (no word wrap)</small>
+            </div>
+
+            <div class="control-group" id="textColorGroup" style="display:none;">
+                <label>Text Color</label>
+                <input type="color" id="textColor" value="#e0e0e0">
+                <small style="color: #666; display: block; margin-top: 5px;">Will be converted to Unity rich text format</small>
+            </div>
+
+            <div class="control-group" id="buttonTextGroup" style="display:none;">
+                <label>Button Text</label>
+                <input type="text" id="buttonText" placeholder="Click Me">
+            </div>
+
+            <div class="control-group" id="commandGroup" style="display:none;">
+                <label>Command</label>
+                <input type="text" id="commandText" placeholder=".heal">
+            </div>
+
+            <div class="control-group" id="categoryTextGroup" style="display:none;">
+                <label>Category Name</label>
+                <input type="text" id="categoryText" placeholder="My Category">
+            </div>
+
+            <div class="control-group" id="categoryColorGroup" style="display:none;">
+                <label>Category Color</label>
+                <input type="color" id="categoryColor" value="#ffd700">
+                <small style="color: #666; display: block; margin-top: 5px;">Default is gold (#ffd700)</small>
+            </div>
+
+            <div class="control-group" id="imageGroup" style="display:none;">
+                <label>Image Filename</label>
+                <input type="text" id="imageFilename" placeholder="my_image.png" value="CHANGENAME.png">
+                <small style="color: #666; display: block; margin-top: 5px;">Image file that will be loaded from your plugin's Images folder</small>
+            </div>
+
+            <button class="btn" onclick="addElement()">Add Element to Canvas</button>
+
+            <h2 style="margin-top: 30px;">Elements on Canvas</h2>
+            <div class="elements-list" id="elementsList"></div>
+
+            <button class="btn btn-danger" style="margin-top: 20px;" onclick="clearCanvas()">Clear All</button>
+            
+            <h2 style="margin-top: 30px;">Save/Load Layout</h2>
+            <button class="btn" style="background: #9b59b6; margin-bottom: 10px;" onclick="saveLayout()">💾 Save Layout</button>
+            <button class="btn" style="background: #e67e22;" onclick="document.getElementById('fileInput').click()">📁 Load Layout</button>
+            <input type="file" id="fileInput" accept=".json" style="display: none;" onchange="loadLayout(event)">
+            
+            <button class="btn btn-success" style="margin-top: 20px;" onclick="generateCode()">Generate C# Code</button>
+        </div>
+
+        <div class="canvas-container">
+            <div class="canvas-header">
+                <h2>Canvas Preview</h2>
+                <div class="canvas-settings">
+                    <label>Width:</label>
+                    <input type="number" id="canvasWidth" value="500" min="200" max="1200" onchange="updateCanvasSize()">
+                    <label>Height:</label>
+                    <input type="number" id="canvasHeight" value="300" min="150" max="800" onchange="updateCanvasSize()">
+                    <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                        <input type="checkbox" id="snapToGrid" checked>
+                        Snap to Grid (10px)
+                    </label>
+                </div>
+            </div>
+            
+            <div class="canvas-wrapper" id="canvasWrapper">
+                <div class="canvas" id="canvas">
+                    <div class="grid-overlay"></div>
+                </div>
+            </div>
+
+            <div class="code-output" id="codeOutput" style="display:none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h3 style="margin: 0; color: #4a90e2;">Generated C# Code</h3>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn-small" onclick="copyCode(event)" style="background: #27ae60;">📋 Copy Code</button>
+                        <button class="btn-small" onclick="hideCode()" style="background: #dc143c;">Hide</button>
+                    </div>
+                </div>
+                <pre id="codeContent"></pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let elements = [];
+        let selectedElement = null;
+        let draggedElement = null;
+        let dragOffset = { x: 0, y: 0 };
+        let resizing = false;
+        let elementCounter = 0;
+        const SNAP_GRID = 10;
+
+        function snapToGrid(value) {
+            const snapEnabled = document.getElementById('snapToGrid').checked;
+            if (snapEnabled) {
+                return Math.round(value / SNAP_GRID) * SNAP_GRID;
+            }
+            return Math.round(value);
+        }
+
+        // Update element type visibility
+        document.getElementById('elementType').addEventListener('change', function() {
+            const type = this.value;
+            
+            // Show/hide appropriate fields
+            document.getElementById('titleGroup').style.display = type === 'title' ? 'block' : 'none';
+            document.getElementById('titleColorGroup').style.display = type === 'title' ? 'block' : 'none';
+            document.getElementById('textGroup').style.display = type === 'text' ? 'block' : 'none';
+            document.getElementById('textColorGroup').style.display = type === 'text' ? 'block' : 'none';
+            document.getElementById('buttonTextGroup').style.display = type === 'button' ? 'block' : 'none';
+            document.getElementById('commandGroup').style.display = type === 'button' ? 'block' : 'none';
+            document.getElementById('categoryTextGroup').style.display = type === 'category' ? 'block' : 'none';
+            document.getElementById('categoryColorGroup').style.display = type === 'category' ? 'block' : 'none';
+            document.getElementById('imageGroup').style.display = type === 'image' ? 'block' : 'none';
+            
+            // Set default values when switching to title
+            if (type === 'title') {
+                document.getElementById('titleText').value = 'My Title';
+                document.getElementById('titleColor').value = '#ffffff';
+            }
+        });
+
+        // Title color preview update
+        document.getElementById('titleColor').addEventListener('input', function() {
+            // Color updates are handled by the browser's native color picker
+        });
+
+        function updateCanvasSize() {
+            const width = document.getElementById('canvasWidth').value;
+            const height = document.getElementById('canvasHeight').value;
+            const canvas = document.getElementById('canvas');
+            canvas.style.width = width + 'px';
+            canvas.style.height = height + 'px';
+            
+            // Update all title elements to stay centered
+            elements.forEach(element => {
+                if (element.type === 'title') {
+                    element.x = Math.floor((width - element.width) / 2);
+                    const div = document.getElementById(element.id);
+                    if (div) {
+                        div.style.left = element.x + 'px';
+                        const coordDisplay = div.querySelector('.coord-display');
+                        if (coordDisplay) {
+                            coordDisplay.textContent = `X: ${element.x}, Y: ${element.y}`;
+                        }
+                    }
+                }
+            });
+            updateElementsList();
+        }
+
+        function addElement() {
+            const type = document.getElementById('elementType').value;
+            const canvas = document.getElementById('canvas');
+            const canvasWidth = parseInt(document.getElementById('canvasWidth').value);
+            
+            const element = {
+                id: 'element_' + (++elementCounter),
+                type: type,
+                x: 10,
+                y: 10,
+                width: type === 'button' ? 120 : (type === 'title' ? 300 : (type === 'image' ? 100 : 200)),
+                height: type === 'category' ? 25 : (type === 'button' ? 30 : (type === 'title' ? 40 : (type === 'image' ? 100 : 50))),
+                resized: false // Track if button has been resized
+            };
+
+            if (type === 'title') {
+                const titleText = document.getElementById('titleText').value;
+                const titleColor = document.getElementById('titleColor').value;
+                console.log('Title text:', titleText, 'Title color:', titleColor); // Debug
+                element.text = titleText && titleText.trim() !== '' ? titleText : 'My Title';
+                element.color = titleColor;
+                // Always center title horizontally at the top
+                element.x = Math.floor((canvasWidth - element.width) / 2);
+                element.y = 0;
+            } else if (type === 'text') {
+                element.content = document.getElementById('textContent').value;
+                element.color = document.getElementById('textColor').value;
+                // Calculate width based on text length (rough estimate: 8px per character)
+                element.width = Math.max(100, element.content.length * 8 + 10);
+            } else if (type === 'button') {
+                element.text = document.getElementById('buttonText').value || 'Button';
+                element.command = document.getElementById('commandText').value || '.command';
+            } else if (type === 'category') {
+                element.text = document.getElementById('categoryText').value || 'Category';
+                element.color = document.getElementById('categoryColor').value;
+            } else if (type === 'image') {
+                element.filename = document.getElementById('imageFilename').value || 'CHANGENAME.png';
+            }
+
+            elements.push(element);
+            renderElement(element);
+            updateElementsList();
+        }
+
+        function renderElement(element) {
+            const canvas = document.getElementById('canvas');
+            const div = document.createElement('div');
+            div.className = 'element';
+            div.id = element.id;
+            div.style.left = element.x + 'px';
+            div.style.top = element.y + 'px';
+            div.style.width = element.width + 'px';
+            div.style.height = element.height + 'px';
+
+            const coordDisplay = document.createElement('div');
+            coordDisplay.className = 'coord-display';
+            coordDisplay.textContent = `X: ${element.x}, Y: ${element.y}`;
+            div.appendChild(coordDisplay);
+
+            if (element.type === 'text') {
+                const textDiv = document.createElement('div');
+                textDiv.className = 'element-text';
+                textDiv.textContent = element.content;
+                textDiv.style.color = element.color || '#e0e0e0';
+                div.appendChild(textDiv);
+            } else if (element.type === 'title') {
+                const titleDiv = document.createElement('div');
+                titleDiv.className = 'element-title';
+                titleDiv.textContent = element.text || 'My Title';
+                titleDiv.style.color = element.color || '#ffffff';
+                console.log('Rendering title:', element.text, 'with color:', element.color); // Debug
+                div.appendChild(titleDiv);
+            } else if (element.type === 'button') {
+                const btn = document.createElement('div');
+                btn.className = 'element-button';
+                btn.textContent = element.text;
+                div.appendChild(btn);
+            } else if (element.type === 'category') {
+                const cat = document.createElement('div');
+                cat.className = 'element-category';
+                cat.textContent = element.text;
+                cat.style.color = element.color || '#ffd700';
+                div.appendChild(cat);
+            } else if (element.type === 'image') {
+                const img = document.createElement('div');
+                img.className = 'element-image';
+                img.textContent = '🖼️ ' + (element.filename || 'CHANGENAME.png');
+                div.appendChild(img);
+            }
+
+            const resizeHandle = document.createElement('div');
+            resizeHandle.className = 'resize-handle';
+            div.appendChild(resizeHandle);
+
+            // Prevent dragging and resizing for title elements
+            if (element.type === 'title') {
+                div.classList.add('title-locked');
+                div.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                });
+            } else {
+                div.addEventListener('mousedown', (e) => {
+                    if (e.target.classList.contains('resize-handle')) {
+                        resizing = true;
+                        selectedElement = element;
+                        selectElement(element);
+                        e.preventDefault();
+                    } else {
+                        selectElement(element);
+                        draggedElement = element;
+                        const rect = div.getBoundingClientRect();
+                        const canvasRect = canvas.getBoundingClientRect();
+                        dragOffset.x = e.clientX - rect.left;
+                        dragOffset.y = e.clientY - rect.top;
+                        e.preventDefault();
+                    }
+                });
+            }
+
+            canvas.appendChild(div);
+        }
+
+        function selectElement(element) {
+            selectedElement = element;
+            document.querySelectorAll('.element').forEach(el => el.classList.remove('selected'));
+            document.getElementById(element.id).classList.add('selected');
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            if (resizing && selectedElement) {
+                const canvas = document.getElementById('canvas');
+                const canvasRect = canvas.getBoundingClientRect();
+                const div = document.getElementById(selectedElement.id);
+                
+                const newWidth = Math.max(20, e.clientX - div.getBoundingClientRect().left);
+                const newHeight = Math.max(20, e.clientY - div.getBoundingClientRect().top);
+                
+                selectedElement.width = snapToGrid(newWidth);
+                selectedElement.height = snapToGrid(newHeight);
+                
+                // Mark button as resized if it's been resized from default
+                if (selectedElement.type === 'button') {
+                    const defaultWidth = 120;
+                    const defaultHeight = 30;
+                    if (selectedElement.width !== defaultWidth || selectedElement.height !== defaultHeight) {
+                        selectedElement.resized = true;
+                    }
+                }
+                
+                div.style.width = selectedElement.width + 'px';
+                div.style.height = selectedElement.height + 'px';
+                
+                updateElementsList();
+            } else if (draggedElement && !resizing) {
+                const canvas = document.getElementById('canvas');
+                const canvasRect = canvas.getBoundingClientRect();
+                
+                let newX = e.clientX - canvasRect.left - dragOffset.x;
+                let newY = e.clientY - canvasRect.top - dragOffset.y;
+
+                // Apply snapping (no boundary constraints)
+                draggedElement.x = snapToGrid(newX);
+                draggedElement.y = snapToGrid(newY);
+
+                const div = document.getElementById(draggedElement.id);
+                div.style.left = draggedElement.x + 'px';
+                div.style.top = draggedElement.y + 'px';
+
+                const coordDisplay = div.querySelector('.coord-display');
+                coordDisplay.textContent = `X: ${draggedElement.x}, Y: ${draggedElement.y}`;
+
+                updateElementsList();
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            draggedElement = null;
+            resizing = false;
+        });
+
+        function updateElementsList() {
+            const list = document.getElementById('elementsList');
+            list.innerHTML = '';
+
+            elements.forEach(element => {
+                const item = document.createElement('div');
+                item.className = 'element-item';
+                
+                const info = document.createElement('div');
+                info.className = 'element-item-info';
+                
+                let label = '';
+                if (element.type === 'text') label = element.content.substring(0, 30);
+                else if (element.type === 'title') label = element.text;
+                else if (element.type === 'button') label = element.text;
+                else if (element.type === 'category') label = element.text;
+                else if (element.type === 'image') label = element.filename;
+
+                info.innerHTML = `
+                    <span class="element-item-type">${element.type.toUpperCase()}</span>
+                    ${label}
+                    <br>
+                    <small style="color: #666;">X: ${element.x}, Y: ${element.y}, W: ${element.width}, H: ${element.height}</small>
+                `;
+
+                const actions = document.createElement('div');
+                actions.className = 'element-item-actions';
+
+                const selectBtn = document.createElement('button');
+                selectBtn.className = 'btn-small';
+                selectBtn.textContent = 'Select';
+                selectBtn.onclick = () => selectElement(element);
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'btn-small danger';
+                deleteBtn.textContent = 'Delete';
+                deleteBtn.onclick = () => deleteElement(element);
+
+                actions.appendChild(selectBtn);
+                actions.appendChild(deleteBtn);
+
+                item.appendChild(info);
+                item.appendChild(actions);
+                list.appendChild(item);
+            });
+        }
+
+        function deleteElement(element) {
+            const index = elements.indexOf(element);
+            if (index > -1) {
+                elements.splice(index, 1);
+                const div = document.getElementById(element.id);
+                if (div) div.remove();
+                updateElementsList();
+            }
+        }
+
+        function clearCanvas() {
+            if (confirm('Are you sure you want to clear all elements?')) {
+                elements = [];
+                document.getElementById('canvas').innerHTML = '<div class="grid-overlay"></div>';
+                updateElementsList();
+                document.getElementById('codeOutput').style.display = 'none';
+            }
+        }
+
+        function generateCode() {
+            const width = document.getElementById('canvasWidth').value;
+            const height = document.getElementById('canvasHeight').value;
+
+            let code = `// Custom Canvas UI - ${width}x${height}\n`;
+            code += `Call("SetPlugin", "YourPluginName");\n`;
+            code += `Call("SetTargetWindow", "YourWindowName");\n`;
+            code += `Call("SetUI", ${width}, ${height});\n`;
+            code += `Call("HideTitleBar"); // Optional\n\n`;
+
+            elements.forEach(element => {
+                if (element.type === 'text') {
+                    const content = element.content.replace(/"/g, '\\"').replace(/\n/g, '\\n');
+                    const hexColor = element.color || '#e0e0e0';
+                    const colorTag = hexColor.replace('#', '');
+                    const wrappedContent = `<color=#${colorTag}>${content}</color>`;
+                    const adjustedX = element.x + 5; // Add 5px offset for text
+                    code += `Call("AddText", "${wrappedContent}", ${adjustedX}f, ${element.y}f);\n`;
+                } else if (element.type === 'title') {
+                    const hexColor = element.color || '#ffffff';
+                    const colorTag = hexColor.replace('#', '').toUpperCase();
+                    const wrappedText = `<color=#${colorTag}>${element.text}</color>`;
+                    code += `Call("SetTitle", "${wrappedText}");\n`;
+                } else if (element.type === 'button') {
+                    // Check if button was resized - use 6 parameter overload if so
+                    if (element.resized) {
+                        code += `Call("AddButton", "${element.text}", "${element.command}", ${element.x}f, ${element.y}f, ${element.width}f, ${element.height}f);\n`;
+                    } else {
+                        // Standard button (4 parameters)
+                        code += `Call("AddButton", "${element.text}", "${element.command}", ${element.x}f, ${element.y}f);\n`;
+                    }
+                } else if (element.type === 'category') {
+                    const hexColor = element.color || '#ffd700';
+                    const colorTag = hexColor.replace('#', '');
+                    const wrappedText = `<color=#${colorTag}>${element.text}</color>`;
+                    const adjustedX = element.x + 5; // Add 5px offset for category
+                    code += `Call("AddCategory", "${wrappedText}", ${adjustedX}f, ${element.y}f);\n`;
+                } else if (element.type === 'image') {
+                    code += `Call("AddImage", "${element.filename}", ${element.x}f, ${element.y}f, ${element.width}f, ${element.height}f);\n`;
+                }
+            });
+
+            document.getElementById('codeContent').textContent = code;
+            document.getElementById('codeOutput').style.display = 'block';
+        }
+
+        function copyCode(event) {
+            const codeContent = document.getElementById('codeContent').textContent;
+            
+            navigator.clipboard.writeText(codeContent).then(() => {
+                // Visual feedback
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                btn.style.background = '#229954';
+                
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = '#27ae60';
+                }, 2000);
+            }).catch(err => {
+                alert('Failed to copy code: ' + err);
+            });
+        }
+
+        function hideCode() {
+            document.getElementById('codeOutput').style.display = 'none';
+        }
+
+        function saveLayout() {
+            const width = document.getElementById('canvasWidth').value;
+            const height = document.getElementById('canvasHeight').value;
+            
+            const layout = {
+                version: "1.0",
+                canvasWidth: width,
+                canvasHeight: height,
+                elements: elements
+            };
+
+            const dataStr = JSON.stringify(layout, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            
+            // Create a temporary link element
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(dataBlob);
+            
+            // Prompt user for filename (or use default if they cancel)
+            const filename = prompt('Enter filename for your layout:', 'my-ui-layout') || 'zui-layout';
+            link.download = filename.endsWith('.json') ? filename : filename + '.json';
+            
+            // Trigger download
+            link.click();
+            
+            // Clean up
+            URL.revokeObjectURL(link.href);
+        }
+
+        function loadLayout(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const layout = JSON.parse(e.target.result);
+                    
+                    // Validate layout
+                    if (!layout.elements || !Array.isArray(layout.elements)) {
+                        alert('Invalid layout file format!');
+                        return;
+                    }
+
+                    // Clear current canvas
+                    elements = [];
+                    document.getElementById('canvas').innerHTML = '<div class="grid-overlay"></div>';
+                    
+                    // Set canvas size
+                    if (layout.canvasWidth && layout.canvasHeight) {
+                        document.getElementById('canvasWidth').value = layout.canvasWidth;
+                        document.getElementById('canvasHeight').value = layout.canvasHeight;
+                        updateCanvasSize();
+                    }
+                    
+                    // Load elements
+                    elementCounter = 0;
+                    layout.elements.forEach(elem => {
+                        // Ensure element has an ID
+                        if (!elem.id) {
+                            elem.id = 'element_' + (++elementCounter);
+                        } else {
+                            // Extract counter from ID to maintain uniqueness
+                            const matches = elem.id.match(/element_(\d+)/);
+                            if (matches) {
+                                const num = parseInt(matches[1]);
+                                if (num > elementCounter) elementCounter = num;
+                            }
+                        }
+                        
+                        elements.push(elem);
+                        renderElement(elem);
+                    });
+                    
+                    updateElementsList();
+                    alert('Layout loaded successfully!');
+                    
+                } catch (error) {
+                    alert('Error loading layout file: ' + error.message);
+                }
+            };
+            
+            reader.readAsText(file);
+            
+            // Reset file input so same file can be loaded again
+            event.target.value = '';
+        }
+
+        // Initialize
+        updateCanvasSize();
+    </script>
+</body>
+</html>

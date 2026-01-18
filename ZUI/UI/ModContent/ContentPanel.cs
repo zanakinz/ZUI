@@ -20,8 +20,6 @@ namespace ZUI.UI.ModContent
         public override string PanelId => "CorePanel";
 
         public override int MinWidth => Settings.UseHorizontalContentLayout ? 340 : 100;
-        //public override int MaxWidth => 150;
-
         public override int MinHeight => 25;
         public override Vector2 DefaultAnchorMin => new Vector2(0.5f, 0.5f);
         public override Vector2 DefaultAnchorMax => new Vector2(0.5f, 0.5f);
@@ -36,9 +34,13 @@ namespace ZUI.UI.ModContent
         private Toggle _pinToggle;
         public override float Opacity => Settings.UITransparency;
 
-        // Cache sprites to avoid reloading repeatedly
+        // Standard Button Sprites (For Submenus/Dropdowns)
         private Sprite _btnNormalSprite;
         private Sprite _btnSelectedSprite;
+
+        // Top Bar Specific Sprites
+        private Sprite _menuBarBtnNormal;
+        private Sprite _menuBarBtnHighlight;
 
         public ContentPanel(UIBase owner) : base(owner)
         {
@@ -49,27 +51,39 @@ namespace ZUI.UI.ModContent
             TitleBar.SetActive(false);
 
             // --- LOAD SPRITES ---
-            // Load panel background (30px border)
-            var panelSprite = SpriteLoader.LoadSprite("panel.png", 100f, new Vector4(30, 30, 30, 30));
-            // Load button sprites (10px border)
+
+            // 1. Main Background (Top Bar)
+            var barSprite = SpriteLoader.LoadSprite("menubar.png", 100f, new Vector4(50, 35, 50, 10));
+
+            // 2. Top Bar Buttons (Seamless style)
+            _menuBarBtnNormal = SpriteLoader.LoadSprite("menubar_button.png", 100f, new Vector4(5, 5, 5, 5));
+            _menuBarBtnHighlight = SpriteLoader.LoadSprite("menubar_button_highlighted.png", 100f, new Vector4(5, 5, 5, 5));
+
+            // 3. Resize Handle
+            var resizeNormal = SpriteLoader.LoadSprite("resize.png", 100f);
+            var resizeHover = SpriteLoader.LoadSprite("resize_highlighted.png", 100f);
+
+            // 4. Standard Buttons (For Submenus)
             _btnNormalSprite = SpriteLoader.LoadSprite("button.png", 100f, new Vector4(10, 10, 10, 10));
             _btnSelectedSprite = SpriteLoader.LoadSprite("button_selected.png", 100f, new Vector4(10, 10, 10, 10));
 
             // Apply Panel Background
-            if (panelSprite != null)
+            if (barSprite != null)
             {
                 var bgImage = ContentRoot.GetComponent<Image>();
                 if (bgImage != null)
                 {
-                    bgImage.sprite = panelSprite;
+                    bgImage.sprite = barSprite;
                     bgImage.type = Image.Type.Sliced;
-                    bgImage.color = Color.white; // Use texture colors
+                    bgImage.color = Color.white;
                 }
             }
 
+            // --- LAYOUT GROUP ---
+            // Padding adjusted to help position the thinner buttons correctly within the bar background
             _uiAnchor = Settings.UseHorizontalContentLayout
-                ? UIFactory.CreateHorizontalGroup(ContentRoot, "UIAnchor", true, true, true, true)
-                : UIFactory.CreateVerticalGroup(ContentRoot, "UIAnchor", false, true, true, true, padding: new Vector4(5, 5, 5, 5));
+                ? UIFactory.CreateHorizontalGroup(ContentRoot, "UIAnchor", true, true, true, true, 2, new Vector4(5, 5, 0, 10))
+                : UIFactory.CreateVerticalGroup(ContentRoot, "UIAnchor", false, true, true, true, 2, new Vector4(5, 5, 0, 10));
 
             Dragger.DraggableArea = Rect;
             Dragger.OnEndResize();
@@ -82,7 +96,6 @@ namespace ZUI.UI.ModContent
                 var pinButton = UIFactory.CreateToggle(_uiAnchor, "PinButton");
                 UIFactory.SetLayoutElement(pinButton.GameObject, minHeight: 15, preferredHeight: 15, flexibleHeight: 0,
                     minWidth: 15, preferredWidth: 15, flexibleWidth: 0, ignoreLayout: false);
-                // Initialize with saved value
                 pinButton.Toggle.isOn = Settings.IsUILocked;
                 IsPinned = Settings.IsUILocked;
                 pinButton.OnValueChanged += (value) =>
@@ -97,6 +110,13 @@ namespace ZUI.UI.ModContent
             // ZUI Version Label
             var text = UIFactory.CreateLabel(_uiAnchor, "UIAnchorText", $"ZUI 1.0.2");
             UIFactory.SetLayoutElement(text.GameObject, 80, 25, 1, 1);
+
+            // --- FIX: Raise Text by 15px ---
+            // We use margin to push the text visual up without breaking the horizontal layout container
+            if (text.TextMesh != null)
+            {
+                text.TextMesh.margin = new Vector4(0, 0, 0, 15);
+            }
             _objectsList.Add(text.GameObject);
 
             // FAMILIAR submenu - BloodCraft required
@@ -108,11 +128,7 @@ namespace ZUI.UI.ModContent
                     ("Fam Stats", () => Plugin.UIManager.AddPanel(PanelType.FamStats)),
                     ("Toggle", () => { MessageService.EnqueueMessage(MessageService.BCCOM_TOGGLEFAM); }),
                     ("Unbind", () => { MessageService.EnqueueMessage(MessageService.BCCOM_UNBINDFAM); }),
-                    ("Rebind", () =>
-                    {
-                        if (!string.IsNullOrEmpty(Settings.LastBindCommand))
-                            MessageService.EnqueueMessage(Settings.LastBindCommand);
-                    }),
+                    ("Rebind", () => { if (!string.IsNullOrEmpty(Settings.LastBindCommand)) MessageService.EnqueueMessage(Settings.LastBindCommand); }),
                     ("Fam. Actions", () => Plugin.UIManager.AddPanel(PanelType.FamActions))
                 });
             }
@@ -131,8 +147,9 @@ namespace ZUI.UI.ModContent
             if (DependencyService.HasBloodCraft)
             {
                 var questsButton = UIFactory.CreateButton(_uiAnchor, "QuestsButton", "Quests");
-                UIFactory.SetLayoutElement(questsButton.GameObject, ignoreLayout: false, minWidth: 65, minHeight: 25);
-                StyleButton(questsButton); // Apply Style
+                // Height reduced to 17
+                UIFactory.SetLayoutElement(questsButton.GameObject, ignoreLayout: false, minWidth: 65, minHeight: 17);
+                StyleMenuBarButton(questsButton);
                 _objectsList.Add(questsButton.GameObject);
                 questsButton.OnClick = () => Plugin.UIManager.AddPanel(PanelType.Quests);
             }
@@ -141,8 +158,9 @@ namespace ZUI.UI.ModContent
             if (DependencyService.HasBloodCraft)
             {
                 var classButton = UIFactory.CreateButton(_uiAnchor, "ClassButton", "Class");
-                UIFactory.SetLayoutElement(classButton.GameObject, ignoreLayout: false, minWidth: 60, minHeight: 25);
-                StyleButton(classButton); // Apply Style
+                // Height reduced to 17
+                UIFactory.SetLayoutElement(classButton.GameObject, ignoreLayout: false, minWidth: 60, minHeight: 17);
+                StyleMenuBarButton(classButton);
                 _objectsList.Add(classButton.GameObject);
                 classButton.OnClick = () => Plugin.UIManager.AddPanel(PanelType.Class);
             }
@@ -170,7 +188,8 @@ namespace ZUI.UI.ModContent
                     MessageService.EnqueueMessage(MessageService.BCCOM_COMBAT);
                     combatToggle.DisableWithTimer(2000);
                 };
-                UIFactory.SetLayoutElement(combatToggle.GameObject, ignoreLayout: false, minWidth: 80, minHeight: 25);
+                // Height reduced to 17
+                UIFactory.SetLayoutElement(combatToggle.GameObject, ignoreLayout: false, minWidth: 80, minHeight: 17);
             }
 
             // UTILS submenu - conditional items based on dependencies
@@ -178,44 +197,54 @@ namespace ZUI.UI.ModContent
 
             // MODS button - Always available
             var modsButton = UIFactory.CreateButton(_uiAnchor, "ModsButton", "Mods");
-            UIFactory.SetLayoutElement(modsButton.GameObject, ignoreLayout: false, minWidth: 60, minHeight: 25);
-            StyleButton(modsButton); // Apply Style
+            // Height reduced to 17
+            UIFactory.SetLayoutElement(modsButton.GameObject, ignoreLayout: false, minWidth: 60, minHeight: 17);
+            StyleMenuBarButton(modsButton);
             _objectsList.Add(modsButton.GameObject);
             modsButton.OnClick = () => Plugin.UIManager.AddPanel(PanelType.Mods);
 
-            // SCALE button with resize icon
+            // --- SCALE BUTTON (RESIZE HANDLE) ---
             var scaleButton = UIFactory.CreateButton(_uiAnchor, "ScaleButton", "");
-            UIFactory.SetLayoutElement(scaleButton.GameObject, ignoreLayout: false, minWidth: 25, minHeight: 25);
-            // Note: We don't apply StyleButton to ScaleButton because it is an icon button
+
+            // --- FIX: Smaller Size & Manual Position ---
+            // 1. Ignore Layout so we can place it freely
+            // 2. Size reduced to 20x20 (was ~25-32)
+            UIFactory.SetLayoutElement(scaleButton.GameObject, ignoreLayout: true, minWidth: 20, minHeight: 20);
             _objectsList.Add(scaleButton.GameObject);
 
-            // Load and apply resize sprite with smart scaling
-            // SpriteLoader now supports borders, but defaults to null/zero which is correct for an icon
-            var resizeSprite = SpriteLoader.LoadSprite("resize.png");
-            if (resizeSprite != null)
+            // 3. Anchor Top Right
+            var scaleRect = scaleButton.GameObject.GetComponent<RectTransform>();
+            scaleRect.anchorMin = new Vector2(1, 1);
+            scaleRect.anchorMax = new Vector2(1, 1);
+            scaleRect.pivot = new Vector2(1, 1);
+            scaleRect.anchoredPosition = new Vector2(-3, -3); // Tucked into corner
+
+            // Apply Resize Sprites
+            if (resizeNormal != null)
             {
-                // Hide the button text
                 scaleButton.ButtonText.gameObject.SetActive(false);
+                var img = scaleButton.GameObject.GetComponent<Image>();
+                img.sprite = resizeNormal;
+                img.color = Color.white;
 
-                // Create a child GameObject for the icon
-                var iconObj = new GameObject("ResizeIcon");
-                iconObj.transform.SetParent(scaleButton.GameObject.transform, false);
+                var colors = scaleButton.Component.colors;
+                colors.normalColor = Color.white;
+                colors.colorMultiplier = 1f;
+                scaleButton.Component.colors = colors;
 
-                var iconImage = iconObj.AddComponent<Image>();
-                iconImage.sprite = resizeSprite;
-                iconImage.preserveAspect = true;
-                iconImage.raycastTarget = false;
-
-                // Set the rect transform to fit within the button with padding
-                var iconRect = iconObj.GetComponent<RectTransform>();
-                iconRect.anchorMin = Vector2.zero;
-                iconRect.anchorMax = Vector2.one;
-                iconRect.sizeDelta = new Vector2(-6, -6); // 3px padding on each side
-                iconRect.anchoredPosition = Vector2.zero;
+                if (resizeHover != null)
+                {
+                    var comp = scaleButton.Component;
+                    comp.transition = Selectable.Transition.SpriteSwap;
+                    var state = comp.spriteState;
+                    state.highlightedSprite = resizeHover;
+                    state.pressedSprite = resizeHover;
+                    state.selectedSprite = resizeHover;
+                    comp.spriteState = state;
+                }
             }
             else
             {
-                // Fallback to text if sprite fails to load
                 scaleButton.ButtonText.text = "*";
             }
 
@@ -232,13 +261,47 @@ namespace ZUI.UI.ModContent
             if (Plugin.IS_TESTING)
             {
                 var b = UIFactory.CreateButton(_uiAnchor, "TestButton", "T");
-                UIFactory.SetLayoutElement(b.GameObject, ignoreLayout: false, minWidth: 25, minHeight: 25);
-                StyleButton(b);
+                UIFactory.SetLayoutElement(b.GameObject, ignoreLayout: false, minWidth: 25, minHeight: 17);
+                StyleMenuBarButton(b);
                 _objectsList.Add(scaleButton.GameObject);
                 b.OnClick = () => Plugin.UIManager.AddPanel(PanelType.TestPanel);
             }
         }
 
+        // --- NEW: Styles buttons for the Top Bar (Seamless) ---
+        private void StyleMenuBarButton(ButtonRef btn)
+        {
+            if (_menuBarBtnNormal != null)
+            {
+                var img = btn.GameObject.GetComponent<Image>();
+                if (img)
+                {
+                    img.sprite = _menuBarBtnNormal;
+                    img.type = Image.Type.Sliced;
+                    img.color = Color.white;
+                }
+            }
+
+            // Force pure white colors to avoid dark tint
+            var colors = btn.Component.colors;
+            colors.normalColor = Color.white;
+            colors.highlightedColor = Color.white;
+            colors.colorMultiplier = 1f;
+            btn.Component.colors = colors;
+
+            if (_menuBarBtnHighlight != null)
+            {
+                var comp = btn.Component;
+                comp.transition = Selectable.Transition.SpriteSwap;
+                var state = comp.spriteState;
+                state.highlightedSprite = _menuBarBtnHighlight;
+                state.pressedSprite = _menuBarBtnHighlight;
+                state.selectedSprite = _menuBarBtnHighlight;
+                comp.spriteState = state;
+            }
+        }
+
+        // --- STANDARD: Styles buttons for dropdowns/submenus ---
         private void StyleButton(ButtonRef btn)
         {
             if (_btnNormalSprite == null) return;
@@ -298,8 +361,9 @@ namespace ZUI.UI.ModContent
         private void CreateSubmenu(string buttonText, (string optionText, System.Action action)[] options)
         {
             var button = UIFactory.CreateButton(_uiAnchor, $"{buttonText}Button", buttonText);
-            UIFactory.SetLayoutElement(button.GameObject, ignoreLayout: false, minWidth: 70, minHeight: 25);
-            StyleButton(button); // Apply Style
+            // HEIGHT CHANGED: 17
+            UIFactory.SetLayoutElement(button.GameObject, ignoreLayout: false, minWidth: 70, minHeight: 17);
+            StyleMenuBarButton(button); // Main button uses Bar Style
             _objectsList.Add(button.GameObject);
 
             // Create submenu container
@@ -324,7 +388,7 @@ namespace ZUI.UI.ModContent
             {
                 var optionButton = UIFactory.CreateButton(menuContainer, $"{buttonText}_{optionText}Button", optionText);
                 UIFactory.SetLayoutElement(optionButton.GameObject, minHeight: 25, flexibleWidth: 9999);
-                StyleButton(optionButton); // Apply Style
+                StyleButton(optionButton); // Dropdown items use Standard Style
                 optionButton.OnClick = () =>
                 {
                     menuContainer.SetActive(false);
@@ -348,8 +412,9 @@ namespace ZUI.UI.ModContent
         private void CreateSubmenuWithDisabledSupport(string buttonText, (string optionText, System.Action action, bool enabled)[] options)
         {
             var button = UIFactory.CreateButton(_uiAnchor, $"{buttonText}Button", buttonText);
-            UIFactory.SetLayoutElement(button.GameObject, ignoreLayout: false, minWidth: 70, minHeight: 25);
-            StyleButton(button); // Apply Style
+            // HEIGHT CHANGED: 17
+            UIFactory.SetLayoutElement(button.GameObject, ignoreLayout: false, minWidth: 70, minHeight: 17);
+            StyleMenuBarButton(button); // Main button uses Bar Style
             _objectsList.Add(button.GameObject);
 
             // Create submenu container
@@ -374,7 +439,7 @@ namespace ZUI.UI.ModContent
             {
                 var optionButton = UIFactory.CreateButton(menuContainer, $"{buttonText}_{optionText}Button", optionText);
                 UIFactory.SetLayoutElement(optionButton.GameObject, minHeight: 25, flexibleWidth: 9999);
-                StyleButton(optionButton); // Apply Style
+                StyleButton(optionButton); // Dropdown items use Standard Style
 
                 if (!enabled)
                 {

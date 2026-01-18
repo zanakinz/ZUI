@@ -19,10 +19,10 @@ namespace ZUI.Services
 
         // Runtime detection - assume available unless proven otherwise
         // Users can manually disable via config if needed
-        private static bool _hasBloodCraft = true;  // Default: assume available
-        private static bool _hasKindredCommands = true;
-        private static bool _hasKinPonds = true;
-        private static bool _hasScarletSigns = true;
+        private static bool _hasBloodCraft = false;  // Default: assume available
+        private static bool _hasKindredCommands = false;
+        private static bool _hasKinPonds = false;
+        private static bool _hasScarletSigns = false;
 
         // Manual override flags for user configuration
         public static bool ForceDisableBloodCraft { get; set; } = false;

@@ -96,6 +96,14 @@ namespace ZUI.UI.ModContent
                 var pinButton = UIFactory.CreateToggle(_uiAnchor, "PinButton");
                 UIFactory.SetLayoutElement(pinButton.GameObject, minHeight: 15, preferredHeight: 15, flexibleHeight: 0,
                     minWidth: 15, preferredWidth: 15, flexibleWidth: 0, ignoreLayout: false);
+
+                // --- CHANGE: Set Checkmark Color to Crimson Red ---
+                // #DC143C -> R:0.86, G:0.08, B:0.24
+                if (pinButton.Toggle.graphic != null)
+                {
+                    pinButton.Toggle.graphic.color = new Color(0.86f, 0.08f, 0.24f, 1f);
+                }
+
                 pinButton.Toggle.isOn = Settings.IsUILocked;
                 IsPinned = Settings.IsUILocked;
                 pinButton.OnValueChanged += (value) =>
@@ -106,16 +114,14 @@ namespace ZUI.UI.ModContent
                 _pinToggle = pinButton.Toggle;
                 pinButton.Text.text = " ";
             }
-
             // ZUI Version Label
-            var text = UIFactory.CreateLabel(_uiAnchor, "UIAnchorText", $"ZUI 1.0.2");
+            var text = UIFactory.CreateLabel(_uiAnchor, "UIAnchorText", $"ZUI 2.0.0");
             UIFactory.SetLayoutElement(text.GameObject, 80, 25, 1, 1);
 
-            // --- FIX: Raise Text by 15px ---
             // We use margin to push the text visual up without breaking the horizontal layout container
             if (text.TextMesh != null)
             {
-                text.TextMesh.margin = new Vector4(0, 0, 0, 15);
+                text.TextMesh.margin = new Vector4(0, 0, 10, 15);
             }
             _objectsList.Add(text.GameObject);
 

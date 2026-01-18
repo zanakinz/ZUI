@@ -94,7 +94,7 @@ namespace ZUI.Config
                 "Delay in milliseconds between command executions. 0 = instant (may spam), 50 = near-instant (recommended), 2000 = old behavior. Max: 5000ms");
             
             // Server mod availability settings
-            InitConfigEntry(GENERAL_SETTINGS_GROUP, nameof(ServerHasBloodCraft), true,
+            InitConfigEntry(GENERAL_SETTINGS_GROUP, nameof(ServerHasBloodCraft), false,
                 "Set to false if your server doesn't have BloodCraft (disables Familiar, Levels, Class, Quests features)");
             InitConfigEntry(GENERAL_SETTINGS_GROUP, nameof(ServerHasKindredCommands), true,
                 "Set to false if your server doesn't have KindredCommands (disables User/Admin command features)");

@@ -274,7 +274,26 @@ namespace ZUI.API
                 Plugin.LogInstance.LogWarning("[ModRegistry] AddImage called without a Custom UI context.");
             }
         }
+        public static void OpenWindow(string pluginName, string windowId)
+        {
+            if (string.IsNullOrWhiteSpace(pluginName)) return;
+            if (string.IsNullOrWhiteSpace(windowId)) windowId = "Main";
 
+            lock (Lock)
+            {
+                if (CustomPanels.TryGetValue(pluginName, out var windows))
+                {
+                    if (windows.TryGetValue(windowId, out var panel))
+                    {
+                        if (panel != null)
+                        {
+                            panel.SetActive(true);
+                            panel.UIRoot.transform.SetAsLastSibling(); // Bring to front
+                        }
+                    }
+                }
+            }
+        }
         // Standard Button
         public static bool AddButton(string buttonText, string command, string tooltip = "", float x = -1, float y = -1)
         {

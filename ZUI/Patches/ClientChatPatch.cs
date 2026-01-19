@@ -4,6 +4,7 @@ using HarmonyLib;
 using ProjectM.Network;
 using ProjectM.UI;
 using Unity.Collections;
+using Unity.Entities;
 
 namespace ZUI.Patches;
 
@@ -51,6 +52,21 @@ internal static class ClientChatPatch
             {
                 if (!entity.Has<ChatMessageServerEvent>()) continue;
 
+                // --- ZUI PACKET INTERCEPTION START ---
+                // Read the text to see if it contains a hidden ZUI command
+                var chatEvent = entity.Read<ChatMessageServerEvent>();
+                string messageText = chatEvent.MessageText.ToString();
+
+                if (PacketService.TryProcessPacket(messageText))
+                {
+                    // If true, it was a hidden packet and successfully handled.
+                    // Destroy the entity to prevent it from showing in the chat window.
+                    Plugin.EntityManager.DestroyEntity(entity);
+                    continue;
+                }
+                // --- ZUI PACKET INTERCEPTION END ---
+
+                // Standard processing for normal messages (.fam commands, etc)
                 MessageService.HandleMessage(entity);
             }
         }

@@ -15,6 +15,7 @@ using HarmonyLib;
 using ProjectM.Scripting;
 using Unity.Entities;
 using UnityEngine;
+using Il2CppInterop.Runtime.Injection; // Required for ClassInjector
 
 namespace ZUI
 {
@@ -27,7 +28,6 @@ namespace ZUI
         public static Settings Settings { get; private set; }
         private static World _client;
         public static EntityManager EntityManager => _client.EntityManager;
-        //public static ServerGameManager ServerGameManager => _client.GetExistingSystemManaged<ServerScriptMapper>()._ServerGameManager;
         public static bool IsInitialized { get; private set; }
         public static bool IsGameDataInitialized { get; set; }
         public static BCUIManager UIManager { get; set; }
@@ -38,27 +38,13 @@ namespace ZUI
         public static bool IsClientNull() => _client == null;
         public const bool IS_TESTING = false;
 
-        // Public API for external mods - Short and sweet!
-        /// <summary>
-        /// Registers a button in the Mods menu. External mods can call ZUI.AddButton("Text", ".command")
-        /// </summary>
-        public static bool AddButton(string buttonText, string command, string tooltip = "") 
+        // Public API
+        public static bool AddButton(string buttonText, string command, string tooltip = "")
             => ModRegistry.AddButton(buttonText, command, tooltip);
 
-        /// <summary>
-        /// Removes a registered button from the Mods menu.
-        /// </summary>
-        public static bool RemoveButton(string buttonText) 
+        public static bool RemoveButton(string buttonText)
             => ModRegistry.RemoveButton(buttonText);
 
-        /// <summary>
-        /// Loads a sprite from your plugin's Sprites directory.
-        /// Place images in: BepInEx/plugins/{YourPlugin.dll}/Sprites/{filename}
-        /// Supported formats: PNG, JPG
-        /// </summary>
-        /// <param name="filename">The filename of the image (e.g., "icon.png")</param>
-        /// <param name="pixelsPerUnit">Pixels per unit for the sprite (default: 100)</param>
-        /// <returns>The loaded Sprite, or null if loading failed</returns>
         public static Sprite LoadSprite(string filename, float pixelsPerUnit = 100f)
             => Utils.SpriteLoader.LoadSprite(filename, pixelsPerUnit);
 
@@ -83,7 +69,6 @@ namespace ZUI
             LogUtils.Init(Log);
             Instance = this;
 
-
             if (!IsClient)
             {
                 LogUtils.LogInfo($"{PluginInfo.PLUGIN_NAME}[{PluginInfo.PLUGIN_VERSION}] is a client mod! ({Application.productName})");
@@ -92,20 +77,21 @@ namespace ZUI
 
             Settings = new Settings().InitConfig();
             Theme.Opacity = Settings.UITransparency;
-            
-            // Apply config overrides for server mod availability
+
+            // Register Custom MonoBehaviours for IL2CPP
+            ClassInjector.RegisterTypeInIl2Cpp<ImageDownloader>();
+
+            // Dependencies
             DependencyService.ForceDisableBloodCraft = !Settings.ServerHasBloodCraft;
             DependencyService.ForceDisableKindredCommands = !Settings.ServerHasKindredCommands;
             DependencyService.ForceDisableKinPonds = !Settings.ServerHasKinPonds;
             DependencyService.ForceDisableScarletSigns = !Settings.ServerHasScarletSigns;
-            
-            // Check for optional mod dependencies
+
             DependencyService.Initialize();
 
             UIManager = new BCUIManager();
             CoreUpdateBehavior = new CoreUpdateBehavior();
             CoreUpdateBehavior.Setup();
-            //todo CoreUpdateBehavior.ExecuteOnUpdate = MessageService.ProcessAllMessages;
 
             IsInitialized = true;
 
@@ -115,14 +101,12 @@ namespace ZUI
             HarmonyVersionStringPatch = Harmony.CreateAndPatchAll(typeof(VersionStringPatch));
             _harmonyChatPatch = Harmony.CreateAndPatchAll(typeof(ClientChatPatch));
             _harmonyInitPatch = Harmony.CreateAndPatchAll(typeof(InitializationPatch));
-            //_eclipsePatch = Harmony.CreateAndPatchAll(typeof(EclipseClientChatSystemPatch));
 
             Log.LogInfo($"Plugin {PluginInfo.PLUGIN_GUID} version {PluginInfo.PLUGIN_VERSION} is loaded!");
 
-            if(IS_TESTING)
+            if (IS_TESTING)
                 AddTestUI();
         }
-
 
         public override bool Unload()
         {
@@ -132,8 +116,6 @@ namespace ZUI
             HarmonyVersionStringPatch.UnpatchSelf();
             _harmonyChatPatch.UnpatchSelf();
             _harmonyInitPatch.UnpatchSelf();
-            //_eclipsePatch.UnpatchSelf();
-            
             return true;
         }
 
@@ -142,21 +124,19 @@ namespace ZUI
             UIManager.SetupAndShowUI();
         }
 
-        //run on game start
         public static void GameDataOnInitialize(World world)
         {
             if (!IsGameDataInitialized && IsClient)
             {
                 _client = world;
                 IsGameDataInitialized = true;
-                // We only want to run this once, so unpatch the hook that initiates this callback.
                 _harmonyBootPatch.UnpatchSelf();
                 _uiInitializedTimer = new FrameTimer();
 
                 _uiInitializedTimer.Initialise(() =>
-                    {
-                        _uiInitializedTimer.Stop();
-                    },
+                {
+                    _uiInitializedTimer.Stop();
+                },
                     TimeSpan.FromSeconds(5),
                     true).Start();
             }

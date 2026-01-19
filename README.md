@@ -1,8 +1,8 @@
 # ZUI - Modern UI Framework for V Rising
 
-ZUI is a powerful, modular UI framework for V Rising that allows developers to create professional, interactive interfaces with minimal effort. Originally built upon the foundation of *BloodCraftUI - OnlyFams*, ZUI has evolved into a complete UI engine capable of spawning independent windows, rendering custom textures, and providing deep integration with server-side systems.
+ZUI is a powerful, modular UI framework for V Rising that allows developers to create professional, interactive interfaces with minimal effort. Originally built upon the foundation of *BloodCraftUI - OnlyFams*, ZUI has evolved into a complete **Client-Server Hybrid UI engine** capable of spawning independent windows, rendering custom textures, streaming images from web URLs, and providing deep integration with both client-side and server-side systems.
 
-ZUI features built-in support for **BloodCraft**, **KinPonds**, **ScarletSigns**, and **KindredCommands**, while providing a robust API for third-party modders to build their own standalone tools.
+ZUI features built-in support for **BloodCraft**, **KinPonds**, **ScarletSigns**, and **KindredCommands**, while providing a robust API for third-party modders to build their own standalone tools. Server mods can now create UIs dynamically via chat packets without requiring players to install additional client mods.
 
 ---
 
@@ -18,13 +18,16 @@ ZUI features built-in support for **BloodCraft**, **KinPonds**, **ScarletSigns**
 
 ## ✨ Key Features
 
+- **Client-Server Hybrid Architecture**: Use ZUI from client mods OR server mods via JSON chat packets
+- **Server-Side Mod Support**: Server mods can create UIs without requiring client-side mod installation
+- **Dynamic Image Loading**: Stream images from web URLs (HTTP/HTTPS) with automatic caching
 - **Custom Window Engine**: Create independent windows using pixel-perfect custom dimensions OR use the visual designer at [https://zanakinz.github.io/ZUI](https://zanakinz.github.io/ZUI) to create your own UI visually
 - **Dynamic Content Registration**: Add categories, text blocks, and interactive buttons to any window on the fly
-- **Custom Image Support**: Load and render PNG/JPG textures directly into your UI from your mod's Sprites folder
+- **Custom Image Support**: Load and render PNG/JPG textures from your mod's Sprites folder OR from web URLs
 - **Persistent Layouts**: All windows support dragging and resizing with automatic data saving; your UI stays exactly where you left it
 - **Theming & 9-Slicing**: Professional visual style using 9-sliced sprites for seamless button and panel scaling
-- **Input Blocking**: Automatic game-input suppression ensures you don't accidentally cast spells or move while interacting with the UI
 - **Reflection-based Integration**: Third-party mods can integrate without compile-time dependencies
+- **Packet Protocol**: Hidden chat-based packet system allows server mods to control client UIs
 
 ---
 
@@ -39,11 +42,17 @@ ZUI features built-in support for **BloodCraft**, **KinPonds**, **ScarletSigns**
 
 ## 📚 Developer API & Examples
 
-ZUI uses a "Context" based API. You set the plugin and window you want to work on, then add your content.
+ZUI supports **two integration methods**: Client-Side (via reflection) and Server-Side (via chat packets).
+
+### 🔷 Method 1: Client-Side Integration (Reflection-Based)
+
+For client-side mods, use ZUI's "Context" based API via reflection. You set the plugin and window you want to work on, then add your content.
 
 ### 🔘 Basic Registration (Main Menu Integration)
 
 By default, adding buttons without setting a custom UI context will place them in the global **Main** menu.
+
+### 💡 Advanced Client-Side Example
 
 ```csharp
 using ZUI.API;
@@ -109,9 +118,86 @@ ZUI.AddImage("logo.png", 20f, 280f, 560f, 100f);
 | `AddButton(string, string, float, float, float, float)` | Adds button with position (X, Y) and size (W, H) | `ZUI.AddButton("Long", ".cmd", 20f, 280f, 460f, 20f);` |
 | `AddText(string, float, float)` | Adds text at specific X, Y coordinates | `ZUI.AddText("Hello!", 15f, 210f);` |
 | `AddImage(string, float, float, float, float)` | Adds image with filename, X, Y, width, height | `ZUI.AddImage("logo.png", 20f, 40f, 460f, 150f);` |
+| `RegisterImage(string, string)` | Registers an image from a web URL for server-side use | `SendPacket("RegisterImage", ...)` |
+| `SetUICustom(int, int)` | Alternative to SetUI for creating custom windows | `SendPacket("SetUICustom", ...)` |
+| `Open()` | Forces a window to open (server-side) | `SendPacket("Open", ...)` |
 | `OnButtonsChanged` | Event triggered when UI buttons are updated | `ZUI.OnButtonsChanged += () => { };` |
 
-### 💡 Advanced Registration Example
+### 🔶 Method 2: Server-Side Integration (Packet-Based)
+
+Server mods can create UIs by sending specially formatted chat messages that ZUI intercepts and processes. **No client mod installation required** - players only need ZUI installed.
+
+#### Packet Format
+
+All packets follow this structure:
+```
+[[ZUI]]{"Type":"MethodName","Plugin":"YourPlugin","Window":"WindowName","Data":{...}}
+```
+
+#### Server-Side Helper Method
+
+```csharp
+using System.Collections.Generic;
+using System.Text.Json;
+
+private void SendPacket(string type, Dictionary<string, string> data, string plugin = "MyServerMod", string window = "ServerUI")
+{
+    var packet = new
+    {
+        Type = type,
+        Plugin = plugin,
+        Window = window,
+        Data = data
+    };
+
+    string json = JsonSerializer.Serialize(packet);
+    string message = "[[ZUI]]" + json;
+    
+    // Send to player via your server's chat system
+    ServerChatUtils.SendSystemMessageToUser(userEntity, message);
+}
+```
+
+#### Example: Creating a Server-Side UI
+
+```csharp
+// 1. Set up the window
+SendPacket("SetPlugin", new Dictionary<string, string> { { "Plugin", "MyServerMod" } });
+SendPacket("SetTargetWindow", new Dictionary<string, string> { { "Window", "AdminPanel" } });
+SendPacket("SetUICustom", new Dictionary<string, string> { { "W", "600" }, { "H", "400" } });
+SendPacket("SetTitle", new Dictionary<string, string> { { "Text", "<color=#FF0000>Server Admin Panel</color>" } });
+
+// 2. Register an image from a URL (downloads automatically on client)
+SendPacket("RegisterImage", new Dictionary<string, string> {
+    { "Name", "server_logo.png" },
+    { "Url", "https://yourdomain.com/images/logo.png" }
+});
+
+// 3. Add the image to the UI
+SendPacket("AddImage", new Dictionary<string, string> {
+    { "Img", "server_logo.png" },
+    { "X", "250" }, { "Y", "20" },
+    { "W", "100" }, { "H", "100" }
+});
+
+// 4. Add text and buttons
+SendPacket("AddText", new Dictionary<string, string> {
+    { "Text", "Welcome to the admin panel!" },
+    { "X", "20" }, { "Y", "150" }
+});
+
+SendPacket("AddButton", new Dictionary<string, string> {
+    { "Text", "Heal All Players" },
+    { "Cmd", ".healall" },
+    { "X", "20" }, { "Y", "200" },
+    { "W", "560" }, { "H", "40" }
+});
+
+// 5. Force open the window
+SendPacket("Open", new Dictionary<string, string>());
+```
+
+---
 
 ```csharp
 // Setup plugin with multiple categories and custom window
@@ -199,7 +285,9 @@ You can also use named colors:
 
 ## 🔧 Integration Guide for Mod Developers
 
-### Soft Dependency Pattern (Recommended)
+ZUI supports two integration approaches depending on whether your mod is client-side or server-side.
+
+### Client-Side Mods: Soft Dependency Pattern (Recommended)
 
 To integrate ZUI without requiring it at compile-time, use reflection:
 
@@ -253,9 +341,59 @@ public class Plugin : BasePlugin
 }
 ```
 
-### Image Assets
+### Server-Side Mods: Packet-Based Integration
 
-Place your custom PNG/JPG images in:
+Server mods don't need any dependency on ZUI.dll. Simply send formatted chat messages:
+
+```csharp
+using System.Collections.Generic;
+using System.Text.Json;
+
+public class ServerMod
+{
+    private void SendPacket(string type, Dictionary<string, string> data)
+    {
+        var packet = new
+        {
+            Type = type,
+            Plugin = "MyServerMod",
+            Window = "ServerWindow",
+            Data = data
+        };
+
+        string json = JsonSerializer.Serialize(packet);
+        string message = "[[ZUI]]" + json;
+        
+        // Send via your server's chat system
+        ServerChatUtils.SendSystemMessageToUser(userEntity, message);
+    }
+    
+    private void CreateServerUI()
+    {
+        SendPacket("SetPlugin", new Dictionary<string, string> { { "Plugin", "MyServerMod" } });
+        SendPacket("SetTargetWindow", new Dictionary<string, string> { { "Window", "MyPanel" } });
+        SendPacket("SetUICustom", new Dictionary<string, string> { { "W", "500" }, { "H", "300" } });
+        SendPacket("SetTitle", new Dictionary<string, string> { { "Text", "Server Panel" } });
+        SendPacket("AddButton", new Dictionary<string, string> {
+            { "Text", "Click Me" },
+            { "Cmd", ".mycommand" },
+            { "X", "20" }, { "Y", "100" },
+            { "W", "200" }, { "H", "40" }
+        });
+        SendPacket("Open", new Dictionary<string, string>());
+    }
+}
+```
+
+**Key Benefits:**
+- No client mod required (players only need ZUI)
+- Server has full control over UI
+- Can stream images from web URLs
+- Perfect for admin tools and server-specific features
+
+---
+
+**Client-Side:** Place your custom PNG/JPG images in:
 ```
 BepInEx/plugins/Sprites/
 ```
@@ -264,6 +402,24 @@ Then reference them by filename in your code:
 ```csharp
 ZUI.AddImage("your_image.png", x, y, width, height);
 ```
+
+**Server-Side:** Register images from web URLs:
+```csharp
+// Server sends this packet
+SendPacket("RegisterImage", new Dictionary<string, string> {
+    { "Name", "logo.png" },
+    { "Url", "https://yourdomain.com/logo.png" }
+});
+
+// Then use it in UI
+SendPacket("AddImage", new Dictionary<string, string> {
+    { "Img", "logo.png" },
+    { "X", "20" }, { "Y", "20" },
+    { "W", "100" }, { "H", "100" }
+});
+```
+
+**Note:** Images are downloaded asynchronously and cached in memory on the client.
 
 ---
 
@@ -290,9 +446,12 @@ ZUI.AddImage("your_image.png", x, y, width, height);
 - Look for errors in BepInEx console
 
 **Integration not working:**
-- Ensure BepInDependency is set correctly
-- Check that InitZUI() returns true
-- Verify reflection calls match ZUI API method signatures
+- Client-side: Ensure BepInDependency is set correctly
+- Client-side: Check that InitZUI() returns true
+- Client-side: Verify reflection calls match ZUI API method signatures
+- Server-side: Verify JSON packet format is correct
+- Server-side: Ensure [[ZUI]] prefix is at the start of the message
+- Server-side: Check that players have ZUI installed
 
 ---
 

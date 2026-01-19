@@ -3,33 +3,55 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using UnityEngine;
-using BepInEx; // Required for Paths.PluginPath
+using BepInEx;
 
 namespace ZUI.Utils
 {
     /// <summary>
-    /// Utility class for loading sprites from plugin directories.
+    /// Utility class for loading sprites from plugin directories or manual registration (URLs).
     /// Loads images from: 
-    /// 1. BepInEx/plugins/{YourPlugin}/Sprites/{filename}
-    /// 2. BepInEx/plugins/Sprites/{filename} (Fallback)
+    /// 1. Manual Registry (Runtime/Downloaded)
+    /// 2. BepInEx/plugins/{YourPlugin}/Sprites/{filename}
+    /// 3. BepInEx/plugins/Sprites/{filename} (Fallback)
     /// </summary>
     public static class SpriteLoader
     {
+        // Cache for file-loaded sprites
         private static readonly Dictionary<string, Sprite> _cachedSprites = new();
+
+        // Cache for sprites registered manually (via URL or Base64/Runtime)
+        private static readonly Dictionary<string, Sprite> _manualSprites = new();
+
         private static readonly Dictionary<Assembly, string> _pluginPaths = new();
+
+        /// <summary>
+        /// Registers a sprite manually into the system. 
+        /// Used for images downloaded via URL or generated at runtime.
+        /// </summary>
+        public static void RegisterSprite(string name, Sprite sprite)
+        {
+            if (string.IsNullOrEmpty(name) || sprite == null) return;
+
+            if (_manualSprites.ContainsKey(name))
+            {
+                // Clean up old sprite if overwriting to prevent leaks
+                var old = _manualSprites[name];
+                if (old != null) UnityEngine.Object.Destroy(old);
+                _manualSprites[name] = sprite;
+            }
+            else
+            {
+                _manualSprites.Add(name, sprite);
+            }
+        }
 
         /// <summary>
         /// Loads a sprite from the calling plugin's directory or the global Sprites folder.
         /// </summary>
-        /// <param name="filename">The filename of the image (e.g., "icon.png")</param>
-        /// <param name="pixelsPerUnit">Pixels per unit for the sprite (default: 100)</param>
-        /// <param name="border">The 9-slice border (Left, Bottom, Right, Top). Default is zero.</param>
-        /// <returns>The loaded Sprite, or null if loading failed</returns>
         public static Sprite LoadSprite(string filename, float pixelsPerUnit = 100f, Vector4? border = null)
         {
             try
             {
-                // Get the calling assembly (the mod that called this method)
                 var callingAssembly = Assembly.GetCallingAssembly();
                 return LoadSpriteFromAssembly(callingAssembly, filename, pixelsPerUnit, border);
             }
@@ -45,60 +67,54 @@ namespace ZUI.Utils
         /// </summary>
         public static Sprite LoadSpriteFromAssembly(Assembly pluginAssembly, string filename, float pixelsPerUnit = 100f, Vector4? border = null)
         {
-            if (pluginAssembly == null)
+            if (string.IsNullOrWhiteSpace(filename)) return null;
+
+            // 1. CHECK MANUAL CACHE FIRST (URL/Runtime images)
+            // This allows downloaded images to override file-based lookups or serve as the primary source
+            if (_manualSprites.TryGetValue(filename, out var manualSprite))
             {
-                LogUtils.LogError("[SpriteLoader] Plugin assembly is null");
-                return null;
+                // Ensure the object hasn't been destroyed
+                if (manualSprite != null) return manualSprite;
+                _manualSprites.Remove(filename);
             }
 
-            if (string.IsNullOrWhiteSpace(filename))
+            // 2. Generate cache key for file-based sprites
+            // Handle null assembly gracefully for key generation (Server Packet context)
+            string assemblyName = pluginAssembly != null ? pluginAssembly.FullName : "Global";
+            string borderSuffix = border.HasValue ? $"_{border.Value}" : "_0";
+            string cacheKey = $"{assemblyName}|{filename}{borderSuffix}";
+
+            // 3. Check File Cache
+            if (_cachedSprites.TryGetValue(cacheKey, out var cachedSprite))
             {
-                LogUtils.LogError("[SpriteLoader] Filename is null or empty");
+                if (cachedSprite != null && cachedSprite.texture != null)
+                {
+                    return cachedSprite;
+                }
+                _cachedSprites.Remove(cacheKey);
+            }
+
+            // 4. Locate File on Disk
+            string imagePath = FindImageFile(pluginAssembly, filename);
+
+            if (string.IsNullOrEmpty(imagePath))
+            {
                 return null;
             }
 
             try
             {
-                // Generate a unique cache key that includes the border dimensions
-                // This ensures if we load "panel.png" with borders and then without, they don't conflict
-                string borderSuffix = border.HasValue ? $"_{border.Value}" : "_0";
-                string cacheKey = $"{pluginAssembly.FullName}|{filename}{borderSuffix}";
-
-                // Check Cache
-                if (_cachedSprites.TryGetValue(cacheKey, out var cachedSprite))
-                {
-                    // Verify the Unity Object hasn't been destroyed by the engine
-                    if (cachedSprite != null && cachedSprite.texture != null)
-                    {
-                        return cachedSprite;
-                    }
-                    // If destroyed, remove from cache and reload
-                    _cachedSprites.Remove(cacheKey);
-                }
-
-                // --- LOCATE THE FILE ---
-                string imagePath = FindImageFile(pluginAssembly, filename);
-
-                if (string.IsNullOrEmpty(imagePath))
-                {
-                    // Debug log to help you track what went wrong, but usually we just return null so the UI can fallback
-                    // LogUtils.LogWarning($"[SpriteLoader] Could not find image '{filename}' in plugin folder or global Sprites folder.");
-                    return null;
-                }
-
-                // --- LOAD TEXTURE ---
-                Texture2D texture = LoadTexture(imagePath);
+                var texture = LoadTexture(imagePath);
                 if (texture == null)
                 {
                     LogUtils.LogError($"[SpriteLoader] Failed to decode texture from: {imagePath}");
                     return null;
                 }
 
-                // --- CREATE SPRITE ---
                 // Apply the 9-slice border if provided
                 Vector4 spriteBorder = border ?? Vector4.zero;
 
-                Sprite sprite = Sprite.Create(
+                var sprite = Sprite.Create(
                     texture,
                     new Rect(0, 0, texture.width, texture.height),
                     new Vector2(0.5f, 0.5f), // Pivot Center
@@ -112,132 +128,102 @@ namespace ZUI.Utils
                 {
                     sprite.name = Path.GetFileNameWithoutExtension(filename);
                     _cachedSprites[cacheKey] = sprite;
-                    // LogUtils.LogInfo($"[SpriteLoader] Loaded: {filename} (Border: {spriteBorder})");
                 }
 
                 return sprite;
             }
             catch (Exception ex)
             {
-                LogUtils.LogError($"[SpriteLoader] Critical exception loading '{filename}': {ex.Message}\n{ex.StackTrace}");
+                LogUtils.LogError($"[SpriteLoader] Error creating sprite from '{imagePath}': {ex.Message}");
                 return null;
             }
         }
 
-        /// <summary>
-        /// Locates the image file by checking multiple valid directories.
-        /// </summary>
         private static string FindImageFile(Assembly assembly, string filename)
         {
-            // Strategy 1: Check BepInEx/plugins/{MyPlugin}/Sprites/{filename}
-            // This is the "Best Practice" location
-            string pluginDir = GetPluginDirectory(assembly);
-            if (!string.IsNullOrEmpty(pluginDir))
+            // Strategy 1: Check BepInEx/plugins/{PluginName}/Sprites/{filename}
+            // Only if assembly is provided
+            if (assembly != null)
             {
-                string localSpritesPath = Path.Combine(pluginDir, "Sprites", filename);
-                if (File.Exists(localSpritesPath))
+                string pluginDir = GetPluginDirectory(assembly);
+                if (!string.IsNullOrEmpty(pluginDir))
                 {
-                    return localSpritesPath;
+                    string localPath = Path.Combine(pluginDir, "Sprites", filename);
+                    if (File.Exists(localPath)) return localPath;
                 }
             }
 
-            // Strategy 2: Check BepInEx/plugins/Sprites/{filename}
-            // This is the "Global/Shared" location (where your screenshot shows the files are)
+            // Strategy 2: Check BepInEx/plugins/Sprites/{filename} (Fallback / Global)
             try
             {
-                string globalSpritesPath = Path.Combine(Paths.PluginPath, "Sprites", filename);
-                if (File.Exists(globalSpritesPath))
-                {
-                    return globalSpritesPath;
-                }
+                string globalPath = Path.Combine(Paths.PluginPath, "Sprites", filename);
+                if (File.Exists(globalPath)) return globalPath;
             }
-            catch (Exception)
-            {
-                // Paths.PluginPath might fail if BepInEx isn't fully initialized or weird context
-            }
+            catch { }
 
-            // Strategy 3: Check relative to the DLL if it's not in a standard structure
-            if (!string.IsNullOrEmpty(pluginDir))
+            // Strategy 3: Check relative to the DLL (Flat structure)
+            if (assembly != null)
             {
-                string flatPath = Path.Combine(pluginDir, filename);
-                if (File.Exists(flatPath)) return flatPath;
+                string pluginDir = GetPluginDirectory(assembly);
+                if (!string.IsNullOrEmpty(pluginDir))
+                {
+                    string flatPath = Path.Combine(pluginDir, filename);
+                    if (File.Exists(flatPath)) return flatPath;
+                }
             }
 
             return null;
         }
 
-        /// <summary>
-        /// Clears the sprite cache. Useful for reloading sprites during development without restarting.
-        /// </summary>
         public static void ClearCache()
         {
-            int count = 0;
-            foreach (var sprite in _cachedSprites.Values)
+            // Clear Manual Cache
+            foreach (var s in _manualSprites.Values)
             {
-                if (sprite != null)
+                if (s != null) UnityEngine.Object.Destroy(s);
+            }
+            _manualSprites.Clear();
+
+            // Clear File Cache
+            foreach (var s in _cachedSprites.Values)
+            {
+                if (s != null)
                 {
-                    if (sprite.texture != null)
-                    {
-                        UnityEngine.Object.Destroy(sprite.texture);
-                    }
-                    UnityEngine.Object.Destroy(sprite);
-                    count++;
+                    if (s.texture != null) UnityEngine.Object.Destroy(s.texture);
+                    UnityEngine.Object.Destroy(s);
                 }
             }
             _cachedSprites.Clear();
             _pluginPaths.Clear();
-            LogUtils.LogInfo($"[SpriteLoader] Cleared {count} sprites from cache.");
+
+            LogUtils.LogInfo($"[SpriteLoader] Cleared all sprite caches.");
         }
 
         private static string GetPluginDirectory(Assembly assembly)
         {
-            // Cache the assembly path lookup to avoid expensive Reflection/IO calls every time
-            if (_pluginPaths.TryGetValue(assembly, out var cachedPath))
-            {
-                return cachedPath;
-            }
+            if (assembly == null) return null;
 
+            if (_pluginPaths.TryGetValue(assembly, out var cachedPath)) return cachedPath;
             try
             {
-                // Get the location of the assembly (the .dll file)
-                var assemblyLocation = assembly.Location;
-                if (string.IsNullOrEmpty(assemblyLocation))
-                {
-                    return null;
-                }
+                if (string.IsNullOrEmpty(assembly.Location)) return null;
 
-                // Get the directory containing the .dll
-                var pluginDir = Path.GetDirectoryName(assemblyLocation);
-                _pluginPaths[assembly] = pluginDir;
-                return pluginDir;
+                var path = Path.GetDirectoryName(assembly.Location);
+                _pluginPaths[assembly] = path;
+                return path;
             }
-            catch (Exception ex)
-            {
-                LogUtils.LogError($"[SpriteLoader] Failed to resolve directory for assembly {assembly.FullName}: {ex.Message}");
-                return null;
-            }
+            catch { return null; }
         }
 
         private static Texture2D LoadTexture(string filePath)
         {
             try
             {
-                // Read file bytes
-                var fileData = File.ReadAllBytes(filePath);
-                if (fileData == null || fileData.Length == 0)
-                {
-                    LogUtils.LogError($"[SpriteLoader] File is empty: {filePath}");
-                    return null;
-                }
+                byte[] fileData = File.ReadAllBytes(filePath);
+                Texture2D texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
 
-                // Create texture and load image data
-                // Size (2,2) is a placeholder; LoadImage replaces it with the actual file dimensions
-                var texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
-
-                // Important: linear vs sRGB. UI usually wants sRGB, but let's stick to default.
-                // Bilinear filtering makes resizing look smoother. Point makes it pixelated.
                 texture.filterMode = FilterMode.Bilinear;
-                texture.wrapMode = TextureWrapMode.Clamp; // Don't tile
+                texture.wrapMode = TextureWrapMode.Clamp;
 
                 if (!texture.LoadImage(fileData))
                 {

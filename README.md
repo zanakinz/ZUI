@@ -1,6 +1,6 @@
 # ZUI - Modern UI Framework for V Rising
 <p align="center">
-  <img src="https://zanakinz.github.io/ZUI/Images/logo.png" alt="ZUI" width="850" height="150">
+  <img src="https://zanakinz.github.io/ZUI/Images/logo.png" alt="ZUI" width="800" height="250">
 </p>
 
 ZUI is a powerful, modular UI framework for V Rising that allows developers to create professional, interactive interfaces with minimal effort. Originally built upon the foundation of *BloodCraftUI - OnlyFams*, ZUI has evolved into a complete **Client-Server Hybrid UI engine** capable of spawning independent windows, rendering custom textures, streaming images from web URLs, and providing deep integration with both client-side and server-side systems.

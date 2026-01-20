@@ -6,19 +6,22 @@ using ZUI.UI.ModContent;
 
 namespace ZUI.API
 {
+    /// <summary>
+    /// Central registry for managing custom UI panels and legacy menu buttons.
+    /// Tracks context (current plugin/window) for content registration.
+    /// </summary>
     public static class ModRegistry
     {
         // Legacy "List" Mode Storage
-        private static readonly List<ModPlugin> RegisteredPlugins = new();
+        private static readonly List<ModPlugin> RegisteredPlugins = new List<ModPlugin>();
 
-        // Advanced "Custom UI" Mode Storage
-        // Dictionary<PluginName, Dictionary<WindowID, CustomModPanel>>
-        private static readonly Dictionary<string, Dictionary<string, CustomModPanel>> CustomPanels = new();
+        // Advanced "Custom UI" Mode Storage (PluginName -> WindowId -> Panel)
+        private static readonly Dictionary<string, Dictionary<string, CustomModPanel>> CustomPanels = new Dictionary<string, Dictionary<string, CustomModPanel>>();
 
-        // Initialization Queue for mods that load before ZUI is ready
-        private static readonly List<Action> _initQueue = new();
+        // Initialization Queue for calls made before UI is ready
+        private static readonly List<Action> _initQueue = new List<Action>();
 
-        private static readonly object Lock = new();
+        private static readonly object Lock = new object();
 
         // Context Tracking
         private static string _currentPlugin = null;
@@ -26,7 +29,7 @@ namespace ZUI.API
         private static string _currentWindowId = "Main";
 
         /// <summary>
-        /// Called by ZUI.Plugin when the UI is fully initialized to process queued requests.
+        /// Processes queued UI requests once the UI system is initialized.
         /// </summary>
         public static void ProcessInitQueue()
         {
@@ -116,6 +119,45 @@ namespace ZUI.API
             }
         }
 
+        public static void CreateTab(string name, string tooltip)
+        {
+            if (CheckQueue(() => CreateTab(name, tooltip))) return;
+
+            var panel = GetCurrentContextPanel();
+            if (panel != null)
+            {
+                panel.CreateTab(name, tooltip);
+            }
+            else
+            {
+                Plugin.LogInstance.LogWarning("[ModRegistry] CreateTab called without a Custom UI context. Tabs are only supported in Custom Panels.");
+            }
+        }
+
+        public static void OpenWindow(string pluginName, string windowId)
+        {
+            if (Plugin.UIManager == null || !Plugin.UIManager.IsInitialized) return;
+
+            if (string.IsNullOrWhiteSpace(pluginName)) return;
+            if (string.IsNullOrWhiteSpace(windowId)) windowId = "Main";
+
+            lock (Lock)
+            {
+                if (CustomPanels.TryGetValue(pluginName, out var windows))
+                {
+                    if (windows.TryGetValue(windowId, out var panel))
+                    {
+                        if (panel != null)
+                        {
+                            panel.SetActive(true);
+                            if (panel.UIRoot != null)
+                                panel.UIRoot.transform.SetAsLastSibling();
+                        }
+                    }
+                }
+            }
+        }
+
         private static bool CheckQueue(Action action)
         {
             if (_currentPlugin == null)
@@ -134,7 +176,6 @@ namespace ZUI.API
 
         private static void QueueAction(Action action)
         {
-            // Capture state variables for the closure
             string pName = _currentPlugin;
             string wId = _currentWindowId;
 
@@ -172,7 +213,6 @@ namespace ZUI.API
 
                 var pluginPanels = CustomPanels[_currentPlugin];
 
-                // Check if panel already exists
                 if (!pluginPanels.ContainsKey(windowId))
                 {
                     CustomModPanel newPanel;
@@ -185,14 +225,12 @@ namespace ZUI.API
                         newPanel = new CustomModPanel(Plugin.UIManager.UiBase, _currentPlugin, windowId, w, h);
                     }
 
-                    // Content creation requires panel to be effectively active momentarily
                     newPanel.SetActive(true);
                     newPanel.SetActive(false);
 
                     pluginPanels[windowId] = newPanel;
                     Plugin.UIManager.RegisterPanel(newPanel);
 
-                    // Auto-generate button in Legacy Menu to open this window
                     LegacyAddCategory("Windows");
                     string btnText = windowId == "Main" ? $"Open {_currentPlugin} UI" : $"Open {windowId}";
 
@@ -204,6 +242,13 @@ namespace ZUI.API
                             p.UIRoot.transform.SetAsLastSibling();
                         }
                     }, "Opens the custom window");
+                }
+                else
+                {
+                    // --- FIX: Prevent Duplicate Elements/Tabs ---
+                    // If the window already exists, we reset it before processing new packets.
+                    // This clears out the old content so we don't just keep adding tabs every time the button is pressed.
+                    pluginPanels[windowId].Reset();
                 }
             }
         }
@@ -249,13 +294,8 @@ namespace ZUI.API
             var panel = GetCurrentContextPanel();
             if (panel != null)
             {
-                // Use hash code to generate semi-unique ID for text blocks
                 string id = $"txt_{text.GetHashCode()}";
                 panel.AddText(id, text, x, y);
-            }
-            else
-            {
-                Plugin.LogInstance.LogWarning("[ModRegistry] AddText called without a SetUI() context. Legacy Mods menu does not support raw text.");
             }
         }
 
@@ -269,32 +309,8 @@ namespace ZUI.API
                 string id = $"img_{imageName}_{x}_{y}";
                 panel.AddImage(id, assembly, imageName, x, y, w, h);
             }
-            else
-            {
-                Plugin.LogInstance.LogWarning("[ModRegistry] AddImage called without a Custom UI context.");
-            }
         }
-        public static void OpenWindow(string pluginName, string windowId)
-        {
-            if (string.IsNullOrWhiteSpace(pluginName)) return;
-            if (string.IsNullOrWhiteSpace(windowId)) windowId = "Main";
 
-            lock (Lock)
-            {
-                if (CustomPanels.TryGetValue(pluginName, out var windows))
-                {
-                    if (windows.TryGetValue(windowId, out var panel))
-                    {
-                        if (panel != null)
-                        {
-                            panel.SetActive(true);
-                            panel.UIRoot.transform.SetAsLastSibling(); // Bring to front
-                        }
-                    }
-                }
-            }
-        }
-        // Standard Button
         public static bool AddButton(string buttonText, string command, string tooltip = "", float x = -1, float y = -1)
         {
             if (CheckQueue(() => AddButton(buttonText, command, tooltip, x, y))) return true;
@@ -312,7 +328,6 @@ namespace ZUI.API
             }
         }
 
-        // Custom Image Button Overload
         public static bool AddButton(Assembly assembly, string buttonText, string command, string imageName, float x, float y, float w, float h)
         {
             if (CheckQueue(() => AddButton(assembly, buttonText, command, imageName, x, y, w, h))) return true;
@@ -326,7 +341,6 @@ namespace ZUI.API
             }
             else
             {
-                // Fallback to legacy if no custom panel (will ignore image/size)
                 return LegacyAddButton(buttonText, command, "");
             }
         }
@@ -341,10 +355,6 @@ namespace ZUI.API
                 string id = $"btn_close_{text}";
                 panel.AddCloseButton(id, text, x, y);
             }
-            else
-            {
-                Plugin.LogInstance.LogWarning("[ModRegistry] AddCloseButton called without a SetUI() context.");
-            }
         }
 
         public static bool AddButtonWithCallback(string buttonText, Action onClick, string tooltip = "")
@@ -355,7 +365,6 @@ namespace ZUI.API
             if (panel != null)
             {
                 string id = $"btn_{buttonText}";
-                // Use -1, -1 for template positioning
                 panel.AddButtonWithCallback(id, buttonText, onClick, -1, -1);
                 return true;
             }
@@ -374,6 +383,19 @@ namespace ZUI.API
             }
 
             return LegacyRemoveButton(buttonText);
+        }
+
+        // ==============================================================================================
+        // REFRESH & NOTIFICATION
+        // ==============================================================================================
+
+        /// <summary>
+        /// Triggers a refresh across all registered UI panels.
+        /// Primarily used by ImageDownloader when a background download completes.
+        /// </summary>
+        public static void NotifyChanges()
+        {
+            OnButtonsChanged?.Invoke();
         }
 
         public static bool RemovePlugin(string pluginName)
@@ -415,7 +437,7 @@ namespace ZUI.API
                         _currentCategory = null;
                         _currentWindowId = "Main";
                     }
-                    OnButtonsChanged?.Invoke();
+                    NotifyChanges();
                 }
 
                 return removedLegacy || removedCustom;
@@ -423,7 +445,7 @@ namespace ZUI.API
         }
 
         // ==============================================================================================
-        // LEGACY IMPLEMENTATIONS (Original Logic)
+        // LEGACY IMPLEMENTATIONS
         // ==============================================================================================
 
         private static void LegacyAddCategory(string categoryName)
@@ -459,38 +481,22 @@ namespace ZUI.API
 
                 if (plugin == null) return false;
 
-                if (_currentCategory == null)
-                {
-                    _currentCategory = "Commands";
-                    if (!plugin.Categories.Exists(c => c.CategoryName == "Commands"))
-                    {
-                        plugin.Categories.Add(new ModCategory
-                        {
-                            CategoryName = "Commands",
-                            Buttons = new List<ModButton>()
-                        });
-                    }
-                }
+                EnsureLegacyCategory(plugin);
 
                 var category = plugin.Categories.FirstOrDefault(c =>
                     c.CategoryName.Equals(_currentCategory, StringComparison.OrdinalIgnoreCase));
 
-                if (category == null) return false;
-
-                if (category.Buttons.Exists(b => b.ButtonText.Equals(buttonText, StringComparison.OrdinalIgnoreCase)))
+                if (category == null || category.Buttons.Exists(b => b.ButtonText.Equals(buttonText, StringComparison.OrdinalIgnoreCase)))
                     return false;
 
-                var button = new ModButton
+                category.Buttons.Add(new ModButton
                 {
                     ButtonText = buttonText,
                     Command = command,
                     Tooltip = tooltip,
-                    OnClick = null,
                     RegisteredAt = DateTime.UtcNow
-                };
-
-                category.Buttons.Add(button);
-                OnButtonsChanged?.Invoke();
+                });
+                NotifyChanges();
                 return true;
             }
         }
@@ -504,39 +510,39 @@ namespace ZUI.API
 
                 if (plugin == null) return false;
 
-                if (_currentCategory == null)
-                {
-                    _currentCategory = "Commands";
-                    if (!plugin.Categories.Exists(c => c.CategoryName == "Commands"))
-                    {
-                        plugin.Categories.Add(new ModCategory
-                        {
-                            CategoryName = "Commands",
-                            Buttons = new List<ModButton>()
-                        });
-                    }
-                }
+                EnsureLegacyCategory(plugin);
 
                 var category = plugin.Categories.FirstOrDefault(c =>
                     c.CategoryName.Equals(_currentCategory, StringComparison.OrdinalIgnoreCase));
 
-                if (category == null) return false;
-
-                if (category.Buttons.Exists(b => b.ButtonText.Equals(buttonText, StringComparison.OrdinalIgnoreCase)))
+                if (category == null || category.Buttons.Exists(b => b.ButtonText.Equals(buttonText, StringComparison.OrdinalIgnoreCase)))
                     return false;
 
-                var button = new ModButton
+                category.Buttons.Add(new ModButton
                 {
                     ButtonText = buttonText,
-                    Command = null,
-                    Tooltip = tooltip,
                     OnClick = onClick,
+                    Tooltip = tooltip,
                     RegisteredAt = DateTime.UtcNow
-                };
-
-                category.Buttons.Add(button);
-                OnButtonsChanged?.Invoke();
+                });
+                NotifyChanges();
                 return true;
+            }
+        }
+
+        private static void EnsureLegacyCategory(ModPlugin plugin)
+        {
+            if (_currentCategory == null)
+            {
+                _currentCategory = "Commands";
+                if (!plugin.Categories.Exists(c => c.CategoryName == "Commands"))
+                {
+                    plugin.Categories.Add(new ModCategory
+                    {
+                        CategoryName = "Commands",
+                        Buttons = new List<ModButton>()
+                    });
+                }
             }
         }
 
@@ -559,7 +565,7 @@ namespace ZUI.API
                         b.ButtonText.Equals(buttonText, StringComparison.OrdinalIgnoreCase)) > 0;
                 }
 
-                if (removed) OnButtonsChanged?.Invoke();
+                if (removed) NotifyChanges();
                 return removed;
             }
         }
@@ -571,14 +577,14 @@ namespace ZUI.API
                 RegisteredPlugins.Clear();
                 _initQueue.Clear();
 
-                foreach (var plugin in CustomPanels)
+                foreach (var plugin in CustomPanels.Values)
                 {
-                    foreach (var win in plugin.Value)
+                    foreach (var panel in plugin.Values)
                     {
-                        if (win.Value != null)
+                        if (panel != null)
                         {
-                            win.Value.SetActive(false);
-                            win.Value.Destroy();
+                            panel.SetActive(false);
+                            panel.Destroy();
                         }
                     }
                 }
@@ -589,7 +595,7 @@ namespace ZUI.API
                 _currentWindowId = "Main";
 
                 Plugin.LogInstance.LogInfo("[ModRegistry] Cleared all registered plugins");
-                OnButtonsChanged?.Invoke();
+                NotifyChanges();
             }
         }
 

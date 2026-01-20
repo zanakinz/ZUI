@@ -4,8 +4,10 @@ using System.Reflection;
 
 namespace ZUI.API
 {
+    /// <summary>
     /// Clean, simple API wrapper for external plugins to register buttons with ZUI or create Custom UI Windows.
     /// This is the recommended way to interact with ZUI from external plugins.
+    /// </summary>
     public static class ZUI
     {
         // ==============================================================================================
@@ -52,6 +54,15 @@ namespace ZUI.API
         }
 
         // ==============================================================================================
+        // TABS (NEW)
+        // ==============================================================================================
+
+        public static void CreateTab(string name, string tooltip = "")
+        {
+            ModRegistry.CreateTab(name, tooltip);
+        }
+
+        // ==============================================================================================
         // CONTENT REGISTRATION
         // ==============================================================================================
 
@@ -79,7 +90,6 @@ namespace ZUI.API
         {
             return ModRegistry.AddButton(buttonText, command, "", x, y);
         }
-
 
         public static bool AddButton(string buttonText, string command, float x, float y, float width, float height)
         {

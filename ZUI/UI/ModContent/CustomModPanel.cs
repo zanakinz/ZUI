@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using TMPro;
 using UnityEngine;
@@ -12,6 +13,8 @@ using ZUI.UI.UniverseLib.UI;
 using ZUI.UI.UniverseLib.UI.Models;
 using ZUI.UI.UniverseLib.UI.Panels;
 using ZUI.Utils;
+using ZUI.UI.Components;
+using Il2CppInterop.Runtime;
 
 namespace ZUI.UI.ModContent
 {
@@ -40,17 +43,99 @@ namespace ZUI.UI.ModContent
         private GameObject _buttonScrollContent;
         private GameObject _absoluteContainer;
         private Image _bgImage;
-        private Image _overlayImage; // Track the inner container image to force transparency
+        private Image _overlayImage;
 
-        // Element Tracking for Removal
-        private Dictionary<string, GameObject> _elements = new();
+        // Tab System
+        private GameObject _tabBar;
+        private GameObject _activeTabContent;
+        private List<TabContext> _tabs = new List<TabContext>();
+
+        private Sprite _tabNormalSprite;
+        private Sprite _tabActiveSprite;
+
+        private class TabContext
+        {
+            public string Name;
+            public GameObject ContentObj;
+            public ButtonRef Button;
+        }
+
+        private Dictionary<string, GameObject> _elements = new Dictionary<string, GameObject>();
+
+        // This tracks images that are waiting for a download to finish
+        private List<PendingSprite> _pendingSprites = new List<PendingSprite>();
+        private struct PendingSprite
+        {
+            public Image TargetImage;
+            public string SpriteName;
+            public Assembly Assembly;
+            public GameObject Owner;
+        }
 
         public CustomModPanel(UIBase owner, string pluginName, string windowId, string template) : base(owner)
         {
             PluginName = pluginName;
             WindowId = windowId;
             _isTemplateMode = true;
+            PreloadTabSprites();
+            ApplyTemplate(template);
+            ZUI.API.ModRegistry.OnButtonsChanged += OnRegistryChanged;
+        }
 
+        public CustomModPanel(UIBase owner, string pluginName, string windowId, int width, int height) : base(owner)
+        {
+            PluginName = pluginName;
+            WindowId = windowId;
+            _isTemplateMode = false;
+            _initialWidth = width;
+            _initialHeight = height;
+            PreloadTabSprites();
+            Rect.sizeDelta = new Vector2(_initialWidth, _initialHeight);
+            ZUI.API.ModRegistry.OnButtonsChanged += OnRegistryChanged;
+        }
+
+        private void PreloadTabSprites()
+        {
+            // Use executing assembly to ensure we find ZUI's local folder correctly
+            var assembly = Assembly.GetExecutingAssembly();
+            _tabNormalSprite = SpriteLoader.LoadSpriteFromAssembly(assembly, "button.png", 100f, new Vector4(10, 10, 10, 10));
+            _tabActiveSprite = SpriteLoader.LoadSpriteFromAssembly(assembly, "button_selected.png", 100f, new Vector4(10, 10, 10, 10));
+        }
+
+        private void OnRegistryChanged()
+        {
+            // When the registry changes (download finished), check if any placeholders can be replaced
+            for (int i = _pendingSprites.Count - 1; i >= 0; i--)
+            {
+                var pending = _pendingSprites[i];
+                if (pending.TargetImage == null || pending.Owner == null)
+                {
+                    _pendingSprites.RemoveAt(i);
+                    continue;
+                }
+
+                var sprite = SpriteLoader.LoadSpriteFromAssembly(pending.Assembly, pending.SpriteName, 100f);
+                if (sprite != null)
+                {
+                    pending.TargetImage.sprite = sprite;
+                    pending.TargetImage.color = Color.white;
+
+                    // Check if the newly arrived data is a GIF
+                    var gifData = SpriteLoader.GetGif(pending.SpriteName);
+                    if (gifData != null && pending.Owner.GetComponent<GifPlayer>() == null)
+                    {
+                        var player = pending.Owner.AddComponent(Il2CppType.Of<GifPlayer>()).Cast<GifPlayer>();
+                        player.SetGifData(gifData);
+                    }
+                    _pendingSprites.RemoveAt(i);
+                }
+            }
+        }
+
+        public void ApplyTemplate(string template)
+        {
+            Reset();
+            _isTemplateMode = true;
             switch (template.ToLower())
             {
                 case "small": _initialWidth = 400; _initialHeight = 300; break;
@@ -58,91 +143,39 @@ namespace ZUI.UI.ModContent
                 case "large": _initialWidth = 800; _initialHeight = 600; break;
                 default: _initialWidth = 600; _initialHeight = 450; break;
             }
-
-            Rect.sizeDelta = new Vector2(_initialWidth, _initialHeight);
+            if (Rect != null) Rect.sizeDelta = new Vector2(_initialWidth, _initialHeight);
+            if (ContentRoot != null) RebuildLayouts();
         }
 
-        public CustomModPanel(UIBase owner, string pluginName, string windowId, int width, int height) : base(owner)
+        public void SetCustomSize(int width, int height)
         {
-            PluginName = pluginName;
-            WindowId = windowId;
-            _isTemplateMode = false; // Custom dimensions implies absolute positioning mode
+            Reset();
+            _isTemplateMode = false;
             _initialWidth = width;
             _initialHeight = height;
-
-            Rect.sizeDelta = new Vector2(_initialWidth, _initialHeight);
+            if (Rect != null) Rect.sizeDelta = new Vector2(_initialWidth, _initialHeight);
+            if (ContentRoot != null) RebuildLayouts();
         }
 
-        public void SetTitleBarVisibility(bool visible)
+        private void RebuildLayouts()
         {
-            if (TitleBar != null) TitleBar.SetActive(visible);
-        }
-
-        // --- API METHOD: Set Title ---
-        public void SetWindowTitle(string title)
-        {
-            _hasCustomTitle = true;
-            SetTitle(title); // Uses PanelBase.SetTitle logic (Label in TitleBar)
-            SetTitleBarVisibility(true);
-
-            // If we are in Canvas Mode, shift the content container down so it doesn't overlap the new TitleBar
-            if (!_isTemplateMode && _absoluteContainer != null)
+            if (_absoluteContainer)
             {
-                var rect = _absoluteContainer.GetComponent<RectTransform>();
-
-                // Top-Left Anchor logic: Shift down by 30px
-                rect.anchoredPosition = new Vector2(0, -30);
-
-                // Reduce height so it doesn't clip out the bottom
-                // Reduce width by 25 to account for scrollbar
-                rect.sizeDelta = new Vector2(_initialWidth - 25, _initialHeight - 30);
-            }
-        }
-
-        // --- FIX: Force Colors on Update (Fixes Red Tint) ---
-        public override void Update()
-        {
-            base.Update();
-
-            // 1. Force Main Panel Background to White (so sprite shows)
-            if (_bgImage != null && _bgImage.sprite != null && _bgImage.color != Color.white)
-            {
-                _bgImage.color = Color.white;
+                if (_absoluteContainer.transform.parent != null && _absoluteContainer.transform.parent.parent != null)
+                    UnityEngine.Object.Destroy(_absoluteContainer.transform.parent.parent.gameObject);
+                else
+                    UnityEngine.Object.Destroy(_absoluteContainer);
             }
 
-            // 2. Force Inner ScrollView/Layout Background to Transparent (Remove Red Overlay)
-            if (_overlayImage != null && _overlayImage.color.a > 0f)
+            if (_textScrollContent)
             {
-                _overlayImage.color = Color.clear;
-            }
-        }
-
-        protected override void ConstructPanelContent()
-        {
-            base.ConstructPanelContent(); // Setup Dragger
-            SetTitle($"{PluginName} - {WindowId}");
-
-            // --- MAIN PANEL BACKGROUND ---
-            // Explicitly use ZUI's assembly to ensure we find panel.png
-            var panelSprite = SpriteLoader.LoadSpriteFromAssembly(typeof(Plugin).Assembly, "panel.png", 100f, new Vector4(30, 30, 30, 30));
-
-            _bgImage = ContentRoot.GetComponent<Image>();
-            if (_bgImage == null) _bgImage = ContentRoot.AddComponent<Image>();
-
-            if (panelSprite != null)
-            {
-                _bgImage.sprite = panelSprite;
-                _bgImage.type = Image.Type.Sliced;
-                _bgImage.color = Color.white;
-            }
-            else
-            {
-                // Fallback: Black/Dark Grey (Overrides any default Red)
-                _bgImage.sprite = null;
-                _bgImage.color = new Color(0.1f, 0.1f, 0.1f, 0.95f);
+                if (_textScrollContent.transform.parent != null && _textScrollContent.transform.parent.parent != null)
+                    UnityEngine.Object.Destroy(_textScrollContent.transform.parent.parent.gameObject);
             }
 
-            // --- LAYOUT CONSTRUCTION ---
+            var split = ContentRoot.transform.Find("SplitGroup");
+            if (split != null) UnityEngine.Object.Destroy(split.gameObject);
+
             if (_isTemplateMode)
             {
                 TitleBar.SetActive(true);
@@ -151,119 +184,239 @@ namespace ZUI.UI.ModContent
             }
             else
             {
-                // In Absolute Mode, default to Hidden unless API requested a Title
                 TitleBar.SetActive(_hasCustomTitle);
                 Dragger.DraggableArea = Rect;
                 ConstructAbsoluteLayout();
             }
+        }
 
-            // Close button is handled by ResizeablePanelBase logic.
-            // We verify here to ensure it's on top if Z-ordering issues arise, but Base usually handles it.
-            // CreateOverlayCloseButton(); // Removed to prevent duplicates with Base class
+        public void SetTitleBarVisibility(bool visible) { if (TitleBar != null) TitleBar.SetActive(visible); }
+
+        public void SetWindowTitle(string title)
+        {
+            _hasCustomTitle = true;
+            SetTitle(title);
+            SetTitleBarVisibility(true);
+            RefreshLayoutOffsets();
+        }
+
+        public override void Update()
+        {
+            base.Update();
+            if (_bgImage != null && _bgImage.sprite != null && _bgImage.color != Color.white) _bgImage.color = Color.white;
+            if (_overlayImage != null && _overlayImage.color.a > 0f) _overlayImage.color = Color.clear;
+        }
+
+        protected override void ConstructPanelContent()
+        {
+            Reset();
+            base.ConstructPanelContent();
+            SetTitle($"{PluginName} - {WindowId}");
+
+            var panelSprite = SpriteLoader.LoadSpriteFromAssembly(Assembly.GetExecutingAssembly(), "panel.png", 100f, new Vector4(30, 30, 30, 30));
+            _bgImage = ContentRoot.GetComponent<Image>();
+            if (_bgImage == null) _bgImage = ContentRoot.AddComponent<Image>();
+
+            if (panelSprite != null) { _bgImage.sprite = panelSprite; _bgImage.type = Image.Type.Sliced; _bgImage.color = Color.white; }
+            else { _bgImage.sprite = null; _bgImage.color = new Color(0.1f, 0.1f, 0.1f, 0.95f); }
+
+            RebuildLayouts();
+            CreateOverlayCloseButton();
+        }
+
+        private void CreateOverlayCloseButton()
+        {
+            if (Rect.gameObject.transform.Find("OverlayCloseButton") != null) return;
+
+            var closeBtnObj = UIFactory.CreateButton(Rect.gameObject, "OverlayCloseButton", "X");
+            var layout = closeBtnObj.GameObject.GetComponent<LayoutElement>();
+            if (!layout) layout = closeBtnObj.GameObject.AddComponent<LayoutElement>();
+            layout.ignoreLayout = true;
+
+            var btnRect = closeBtnObj.GameObject.GetComponent<RectTransform>();
+            btnRect.anchorMin = new Vector2(1, 1);
+            btnRect.anchorMax = new Vector2(1, 1);
+            btnRect.pivot = new Vector2(1, 1);
+            btnRect.anchoredPosition = new Vector2(-5, -5);
+            btnRect.sizeDelta = new Vector2(24, 24);
+
+            var closeSprite = SpriteLoader.LoadSpriteFromAssembly(Assembly.GetExecutingAssembly(), "close_button.png", 100f);
+
+            if (closeSprite != null)
+            {
+                var img = closeBtnObj.GameObject.GetComponent<Image>();
+                if (img) { img.sprite = closeSprite; img.color = Color.white; }
+                if (closeBtnObj.ButtonText != null) closeBtnObj.ButtonText.text = "";
+                var colors = closeBtnObj.Component.colors;
+                colors.normalColor = Color.white; colors.highlightedColor = new Color(0.9f, 0.9f, 0.9f, 1f); colors.pressedColor = new Color(0.7f, 0.7f, 0.7f, 1f);
+                closeBtnObj.Component.colors = colors;
+            }
+
+            closeBtnObj.OnClick = () => { this.SetActive(false); };
         }
 
         private void ConstructTemplateLayout()
         {
             var splitGroup = UIFactory.CreateHorizontalGroup(ContentRoot, "SplitGroup", true, true, true, true, 0, new Vector4(5, 5, 5, 5), Color.clear);
             UIFactory.SetLayoutElement(splitGroup, flexibleWidth: 9999, flexibleHeight: 9999);
-
-            // Capture the image of this group to ensure it stays transparent
             _overlayImage = splitGroup.GetComponent<Image>();
             if (_overlayImage != null) _overlayImage.color = Color.clear;
 
             var leftScrollRoot = UIFactory.CreateScrollView(splitGroup, "TextScroll", out _textScrollContent, out _, Color.clear);
             UIFactory.SetLayoutElement(leftScrollRoot, flexibleWidth: 1, flexibleHeight: 9999);
-
-            var textVlg = _textScrollContent.GetComponent<VerticalLayoutGroup>();
-            textVlg.spacing = 8;
-            textVlg.childAlignment = TextAnchor.UpperLeft;
-            textVlg.childControlWidth = true;
-            textVlg.childForceExpandWidth = true;
-            textVlg.padding = new RectOffset { left = 10, right = 10, top = 10, bottom = 10 };
+            _textScrollContent.GetComponent<VerticalLayoutGroup>().padding = new RectOffset { left = 10, right = 10, top = 10, bottom = 10 };
 
             var separator = UIFactory.CreateUIObject("Separator", splitGroup);
             UIFactory.SetLayoutElement(separator, minWidth: 2, flexibleWidth: 0, flexibleHeight: 9999);
-            var sepImg = separator.AddComponent<Image>();
-            sepImg.color = new Color(1f, 1f, 1f, 0.2f);
+            separator.AddComponent<Image>().color = new Color(1f, 1f, 1f, 0.2f);
 
             var rightScrollRoot = UIFactory.CreateScrollView(splitGroup, "ButtonScroll", out _buttonScrollContent, out _, Color.clear);
             UIFactory.SetLayoutElement(rightScrollRoot, flexibleWidth: 1, flexibleHeight: 9999);
-
-            var btnVlg = _buttonScrollContent.GetComponent<VerticalLayoutGroup>();
-            btnVlg.spacing = 5;
-            btnVlg.childAlignment = TextAnchor.UpperCenter;
-            btnVlg.childControlWidth = true;
-            btnVlg.childForceExpandWidth = true;
-            btnVlg.padding = new RectOffset { left = 10, right = 10, top = 10, bottom = 10 };
+            _buttonScrollContent.GetComponent<VerticalLayoutGroup>().padding = new RectOffset { left = 10, right = 10, top = 10, bottom = 10 };
         }
 
         private void ConstructAbsoluteLayout()
         {
-            // --- SCROLLVIEW SETUP ---
             GameObject scrollRoot = UIFactory.CreateScrollView(ContentRoot, "AbsoluteScroll", out _absoluteContainer, out var scrollbar, Color.clear);
-
             _overlayImage = scrollRoot.GetComponent<Image>();
             if (_overlayImage != null) _overlayImage.color = Color.clear;
-
             UIFactory.SetLayoutElement(scrollRoot, flexibleWidth: 9999, flexibleHeight: 9999);
 
-            // --- SCROLLING CONFIGURATION ---
-            var scrollRect = scrollRoot.GetComponent<ScrollRect>();
-            if (scrollRect != null)
-            {
-                scrollRect.horizontal = false; // Disable horizontal to prevent twitching
-                scrollRect.vertical = true;
-                scrollRect.movementType = ScrollRect.MovementType.Elastic; // Smooth bounce
-                scrollRect.scrollSensitivity = 20f;
-            }
-
-            // Ensure Mask for clipping
             var viewport = _absoluteContainer.transform.parent;
-            if (viewport != null)
-            {
-                var mask = viewport.GetComponent<RectMask2D>();
-                if (mask == null) viewport.gameObject.AddComponent<RectMask2D>();
-            }
+            if (viewport != null) { var mask = viewport.GetComponent<RectMask2D>(); if (mask == null) viewport.gameObject.AddComponent<RectMask2D>(); }
 
-            // Disable Auto-Layout for absolute positioning
-            var vlg = _absoluteContainer.GetComponent<VerticalLayoutGroup>();
-            if (vlg) UnityEngine.Object.DestroyImmediate(vlg);
+            var vlg = _absoluteContainer.GetComponent<VerticalLayoutGroup>(); if (vlg) UnityEngine.Object.DestroyImmediate(vlg);
+            var csf = _absoluteContainer.GetComponent<ContentSizeFitter>(); if (csf) UnityEngine.Object.DestroyImmediate(csf);
 
-            var csf = _absoluteContainer.GetComponent<ContentSizeFitter>();
-            if (csf) UnityEngine.Object.DestroyImmediate(csf);
-
-            // Configure Content Rect
             var rect = _absoluteContainer.GetComponent<RectTransform>();
-            rect.anchorMin = new Vector2(0, 1);
-            rect.anchorMax = new Vector2(0, 1);
-            rect.pivot = new Vector2(0, 1);
+            rect.anchorMin = new Vector2(0, 1); rect.anchorMax = new Vector2(0, 1); rect.pivot = new Vector2(0, 1);
             rect.anchoredPosition = Vector2.zero;
 
-            // Set initial size matches window size MINUS space for scrollbar (approx 25px)
-            float widthOffset = 25f;
-            float topOffset = _hasCustomTitle ? -30f : 0f;
-            float heightReduction = _hasCustomTitle ? 30f : 0f;
+            RefreshLayoutOffsets();
+        }
 
-            rect.sizeDelta = new Vector2(_initialWidth - widthOffset, _initialHeight - heightReduction);
-            rect.anchoredPosition = new Vector2(0, topOffset);
+        private void RefreshLayoutOffsets()
+        {
+            if (_isTemplateMode || _absoluteContainer == null) return;
+            float topOffset = _hasCustomTitle ? -30f : 0f;
+            if (_tabBar != null) topOffset -= 35f;
+            float heightReduction = Math.Abs(topOffset);
+
+            var scrollRectObj = _absoluteContainer.transform.parent.parent.GetComponent<RectTransform>();
+            scrollRectObj.anchoredPosition = new Vector2(0, topOffset);
+            scrollRectObj.sizeDelta = new Vector2(0, -heightReduction);
+
+            var contentRect = _absoluteContainer.GetComponent<RectTransform>();
+            contentRect.sizeDelta = new Vector2(_initialWidth - 25, _initialHeight);
         }
 
         #region Public Modification Methods
+
+        public void CreateTab(string name, string tooltip)
+        {
+            if (_isTemplateMode) return;
+
+            if (_tabBar == null)
+            {
+                _tabBar = UIFactory.CreateHorizontalGroup(ContentRoot, "TabBar", false, true, true, true, 2, new Vector4(5, 5, 2, 2), Color.clear);
+                var tabRect = _tabBar.GetComponent<RectTransform>();
+                tabRect.anchorMin = new Vector2(0, 1); tabRect.anchorMax = new Vector2(1, 1); tabRect.pivot = new Vector2(0.5f, 1);
+                float yPos = _hasCustomTitle ? -30f : 0f;
+                tabRect.anchoredPosition = new Vector2(0, yPos);
+                tabRect.sizeDelta = new Vector2(0, 30);
+
+                var le = _tabBar.GetComponent<LayoutElement>();
+                if (le) le.ignoreLayout = true;
+
+                _tabBar.transform.SetAsLastSibling();
+                RefreshLayoutOffsets();
+            }
+            else
+            {
+                _tabBar.SetActive(true);
+            }
+
+            var tabBtn = UIFactory.CreateButton(_tabBar, $"Tab_{name}", name);
+            UIFactory.SetLayoutElement(tabBtn.GameObject, minWidth: 80, minHeight: 28);
+
+            var img = tabBtn.Component.GetComponent<Image>();
+            if (img != null) { img.sprite = _tabNormalSprite; img.color = Color.white; }
+
+            var contentObj = UIFactory.CreateUIObject($"TabContent_{name}", _absoluteContainer);
+            var rect = contentObj.GetComponent<RectTransform>();
+            if (rect == null) rect = contentObj.AddComponent<RectTransform>();
+
+            rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.one; rect.pivot = new Vector2(0, 1);
+            rect.sizeDelta = Vector2.zero;
+
+            var tabData = new TabContext { Name = name, Button = tabBtn, ContentObj = contentObj };
+            tabBtn.OnClick = () => SelectTab(tabData);
+            _tabs.Add(tabData);
+            _activeTabContent = contentObj;
+
+            if (_tabs.Count == 1) SelectTab(tabData);
+            else contentObj.SetActive(false);
+
+            RecalculateScrollHeight();
+        }
+
+        private void SelectTab(TabContext tab)
+        {
+            foreach (var t in _tabs)
+            {
+                bool isActive = t == tab;
+                if (t.ContentObj != null) t.ContentObj.SetActive(isActive);
+
+                var img = t.Button.Component.GetComponent<Image>();
+                if (img != null) { img.sprite = isActive ? _tabActiveSprite : _tabNormalSprite; img.color = Color.white; }
+
+                var txt = t.Button.ButtonText;
+                if (txt != null) txt.color = isActive ? new Color(1f, 0.8f, 0.4f) : Color.white;
+            }
+
+            _activeTabContent = tab.ContentObj;
+            RecalculateScrollHeight();
+        }
+
+        private void RecalculateScrollHeight()
+        {
+            Transform container = _activeTabContent != null ? _activeTabContent.transform : _absoluteContainer.transform;
+
+            float lowestY = 0;
+            for (int i = 0; i < container.childCount; i++)
+            {
+                var child = container.GetChild(i);
+                if (!child.gameObject.activeSelf) continue;
+                var rt = child.GetComponent<RectTransform>();
+                float bottom = Math.Abs(rt.anchoredPosition.y) + rt.sizeDelta.y;
+                if (bottom > lowestY) lowestY = bottom;
+            }
+
+            var contentRect = _absoluteContainer.GetComponent<RectTransform>();
+            float requiredHeight = lowestY + 40;
+
+            float availableViewHeight = _initialHeight;
+            if (_hasCustomTitle) availableViewHeight -= 30;
+            if (_tabBar != null && _tabBar.activeSelf) availableViewHeight -= 35;
+
+            contentRect.sizeDelta = new Vector2(contentRect.sizeDelta.x, Math.Max(requiredHeight, availableViewHeight));
+            LayoutRebuilder.ForceRebuildLayoutImmediate(contentRect);
+        }
 
         public void AddCategory(string name, float x = -1, float y = -1)
         {
             if (_isTemplateMode)
             {
                 var label = UIFactory.CreateLabel(_buttonScrollContent, $"Cat_{name}", name, TextAlignmentOptions.Left);
-                label.TextMesh.fontSize = 14;
-                label.TextMesh.fontStyle = FontStyles.Bold;
-                label.TextMesh.color = new Color(1f, 0.8f, 0.4f); // Gold
+                label.TextMesh.fontSize = 14; label.TextMesh.fontStyle = FontStyles.Bold;
+                label.TextMesh.color = new Color(1f, 0.8f, 0.4f);
                 UIFactory.SetLayoutElement(label.GameObject, minHeight: 30, flexibleWidth: 9999);
                 RegisterElement(name, label.GameObject);
             }
             else
             {
-                var label = UIFactory.CreateLabel(_absoluteContainer, $"Cat_{name}", name, TextAlignmentOptions.Left);
+                var parent = _activeTabContent ?? _absoluteContainer;
+                var label = UIFactory.CreateLabel(parent, $"Cat_{name}", name, TextAlignmentOptions.Left);
                 PositionElement(label.GameObject, x, y, 150, 25);
                 RegisterElement(name, label.GameObject);
             }
@@ -275,58 +428,57 @@ namespace ZUI.UI.ModContent
             {
                 var label = UIFactory.CreateLabel(_textScrollContent, id, content, TextAlignmentOptions.TopLeft);
                 label.TextMesh.enableWordWrapping = true;
-                var fitter = label.GameObject.AddComponent<ContentSizeFitter>();
-                fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+                label.GameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
                 UIFactory.SetLayoutElement(label.GameObject, minHeight: 0, flexibleHeight: 0, flexibleWidth: 9999);
                 RegisterElement(id, label.GameObject);
             }
             else
             {
-                var label = UIFactory.CreateLabel(_absoluteContainer, id, content, TextAlignmentOptions.TopLeft);
+                var parent = _activeTabContent ?? _absoluteContainer;
+                var label = UIFactory.CreateLabel(parent, id, content, TextAlignmentOptions.TopLeft);
                 PositionElement(label.GameObject, x, y, 200, 50);
                 RegisterElement(id, label.GameObject);
             }
         }
 
-        // --- NEW: Add Image ---
         public void AddImage(string id, Assembly assembly, string imageName, float x, float y, float w, float h)
         {
-            // Only valid for Absolute Layout mode usually, but we check just in case
             if (_isTemplateMode) return;
-
-            var imgObj = UIFactory.CreateUIObject(id, _absoluteContainer);
+            var parent = _activeTabContent ?? _absoluteContainer;
+            var imgObj = UIFactory.CreateUIObject(id, parent);
             var img = imgObj.AddComponent<Image>();
 
-            // Load sprite using passed assembly
             var sprite = SpriteLoader.LoadSpriteFromAssembly(assembly, imageName, 100f);
             if (sprite != null)
             {
                 img.sprite = sprite;
                 img.color = Color.white;
+
+                var gifData = SpriteLoader.GetGif(imageName);
+                if (gifData != null)
+                {
+                    var player = imgObj.AddComponent(Il2CppType.Of<GifPlayer>()).Cast<GifPlayer>();
+                    player.SetGifData(gifData);
+                }
             }
             else
             {
-                // Visual placeholder if missing
-                img.color = new Color(1f, 1f, 1f, 0.2f);
+                img.color = new Color(1f, 1f, 1f, 0.1f); // Gray box placeholder
+                _pendingSprites.Add(new PendingSprite { TargetImage = img, SpriteName = imageName, Assembly = assembly, Owner = imgObj });
             }
 
             PositionElement(imgObj, x, y, w, h);
             RegisterElement(id, imgObj);
         }
 
-        // --- Standard Button ---
         public void AddButton(string id, string text, string command, float x = -1, float y = -1)
         {
-            // Use ZUI assembly for default buttons
-            CreateGenericButton(id, typeof(Plugin).Assembly, text, command, null, x, y, -1, -1,
-                () => { if (!string.IsNullOrEmpty(command)) MessageService.EnqueueMessage(command); });
+            CreateGenericButton(id, typeof(Plugin).Assembly, text, command, null, x, y, -1, -1, () => { if (!string.IsNullOrEmpty(command)) MessageService.EnqueueMessage(command); });
         }
 
-        // --- NEW: Add Button Overload (Custom Image/Size) ---
         public void AddButton(string id, Assembly assembly, string text, string command, string imageName, float x, float y, float w, float h)
         {
-            CreateGenericButton(id, assembly, text, command, imageName, x, y, w, h,
-                () => { if (!string.IsNullOrEmpty(command)) MessageService.EnqueueMessage(command); });
+            CreateGenericButton(id, assembly, text, command, imageName, x, y, w, h, () => { if (!string.IsNullOrEmpty(command)) MessageService.EnqueueMessage(command); });
         }
 
         public void AddButtonWithCallback(string id, string text, Action callback, float x = -1, float y = -1)
@@ -341,116 +493,116 @@ namespace ZUI.UI.ModContent
 
         private void CreateGenericButton(string id, Assembly assembly, string text, string command, string customImageName, float x, float y, float width, float height, Action onClick)
         {
-            GameObject parent = _isTemplateMode ? _buttonScrollContent : _absoluteContainer;
+            GameObject parent = _activeTabContent ?? (_isTemplateMode ? _buttonScrollContent : _absoluteContainer);
             var btn = UIFactory.CreateButton(parent, id, text);
 
-            // Positioning Logic
-            if (_isTemplateMode)
-            {
-                UIFactory.SetLayoutElement(btn.GameObject, minHeight: 32, flexibleWidth: 9999);
-            }
-            else
-            {
-                // Use provided width/height if valid, otherwise default to 120x30
-                float finalW = width > 0 ? width : 120;
-                float finalH = height > 0 ? height : 30;
-                PositionElement(btn.GameObject, x, y, finalW, finalH);
-            }
+            if (_isTemplateMode) UIFactory.SetLayoutElement(btn.GameObject, minHeight: 32, flexibleWidth: 9999);
+            else { float finalW = width > 0 ? width : 120; float finalH = height > 0 ? height : 30; PositionElement(btn.GameObject, x, y, finalW, finalH); }
 
-            // Sprite Logic
-            // If custom image name provided, try to load it (single image, simple transition)
+            var img = btn.GameObject.GetComponent<Image>();
+
             if (!string.IsNullOrEmpty(customImageName))
             {
                 var customSprite = SpriteLoader.LoadSpriteFromAssembly(assembly, customImageName, 100f);
                 if (customSprite != null)
                 {
-                    var img = btn.GameObject.GetComponent<Image>();
-                    img.sprite = customSprite;
-                    img.type = Image.Type.Simple; // Assuming custom art might not be 9-sliced
-                    img.color = Color.white;
-                    // Disable complex state transitions for custom single-image buttons for now
+                    img.sprite = customSprite; img.type = Image.Type.Simple; img.color = Color.white;
                     btn.Component.transition = Selectable.Transition.ColorTint;
+
+                    var gifData = SpriteLoader.GetGif(customImageName);
+                    if (gifData != null)
+                    {
+                        var player = btn.GameObject.AddComponent(Il2CppType.Of<GifPlayer>()).Cast<GifPlayer>();
+                        player.SetGifData(gifData);
+                    }
+                }
+                else
+                {
+                    img.color = new Color(1f, 1f, 1f, 0.1f);
+                    _pendingSprites.Add(new PendingSprite { TargetImage = img, SpriteName = customImageName, Assembly = assembly, Owner = btn.GameObject });
                 }
             }
             else
             {
-                // Default ZUI styling
-                // Use ZUI assembly for standard button sprites
-                var zuiAssembly = typeof(Plugin).Assembly;
+                var zuiAssembly = Assembly.GetExecutingAssembly();
                 var normalSprite = SpriteLoader.LoadSpriteFromAssembly(zuiAssembly, "button.png", 100f, new Vector4(10, 10, 10, 10));
                 var selectedSprite = SpriteLoader.LoadSpriteFromAssembly(zuiAssembly, "button_selected.png", 100f, new Vector4(10, 10, 10, 10));
 
                 if (normalSprite != null)
                 {
-                    var img = btn.GameObject.GetComponent<Image>();
-                    img.sprite = normalSprite;
-                    img.type = Image.Type.Sliced;
-                    img.color = Color.white;
-
+                    img.sprite = normalSprite; img.type = Image.Type.Sliced; img.color = Color.white;
                     if (selectedSprite != null)
                     {
-                        var comp = btn.Component;
-                        comp.transition = Selectable.Transition.SpriteSwap;
+                        var comp = btn.Component; comp.transition = Selectable.Transition.SpriteSwap;
                         var state = comp.spriteState;
-                        state.highlightedSprite = selectedSprite;
-                        state.pressedSprite = selectedSprite;
-                        state.selectedSprite = selectedSprite;
+                        state.highlightedSprite = selectedSprite; state.pressedSprite = selectedSprite; state.selectedSprite = selectedSprite;
                         comp.spriteState = state;
                     }
                 }
+                else
+                {
+                    _pendingSprites.Add(new PendingSprite { TargetImage = img, SpriteName = "button.png", Assembly = zuiAssembly, Owner = btn.GameObject });
+                }
             }
-
             if (onClick != null) btn.OnClick = onClick;
             RegisterElement(id, btn.GameObject);
         }
 
         public void RemoveElement(string id)
         {
-            if (_elements.TryGetValue(id, out var obj))
-            {
-                if (obj != null) UnityEngine.Object.Destroy(obj);
-                _elements.Remove(id);
-            }
+            if (_elements.TryGetValue(id, out var obj)) { if (obj != null) UnityEngine.Object.Destroy(obj); _elements.Remove(id); }
         }
 
-        private void RegisterElement(string id, GameObject obj)
-        {
-            RemoveElement(id);
-            _elements[id] = obj;
-        }
+        private void RegisterElement(string id, GameObject obj) { RemoveElement(id); _elements[id] = obj; }
 
         private void PositionElement(GameObject obj, float x, float y, float w, float h)
         {
             var rect = obj.GetComponent<RectTransform>();
-            rect.anchorMin = new Vector2(0, 1);
-            rect.anchorMax = new Vector2(0, 1);
-            rect.pivot = new Vector2(0, 1);
+            rect.anchorMin = new Vector2(0, 1); rect.anchorMax = new Vector2(0, 1); rect.pivot = new Vector2(0, 1);
             rect.anchoredPosition = new Vector2(x, -y);
             rect.sizeDelta = new Vector2(w, h);
-
-            // --- SCROLLBAR ACTIVATION ---
-            if (_absoluteContainer != null)
-            {
-                var contentRect = _absoluteContainer.GetComponent<RectTransform>();
-
-                // Calculate required height based on element position + TitleBar offset
-                float offset = _hasCustomTitle ? 30f : 0f;
-                float requiredHeight = y + h + 20 + offset;
-
-                if (requiredHeight > contentRect.sizeDelta.y)
-                {
-                    contentRect.sizeDelta = new Vector2(contentRect.sizeDelta.x, requiredHeight);
-                }
-            }
+            RecalculateScrollHeight();
         }
         #endregion
-
         internal override void Reset()
         {
+            // Unsubscribe from events during reset to prevent memory leaks or multiple subscriptions
+            ZUI.API.ModRegistry.OnButtonsChanged -= OnRegistryChanged;
+
+            // --- FIX: Properly destroy all children of the container so items aren't duplicated ---
+            if (_absoluteContainer != null)
+            {
+                for (int i = _absoluteContainer.transform.childCount - 1; i >= 0; i--)
+                {
+                    UnityEngine.Object.Destroy(_absoluteContainer.transform.GetChild(i).gameObject);
+                }
+            }
+
+            // --- FIX: Properly destroy all tab buttons ---
+            if (_tabBar != null)
+            {
+                for (int i = _tabBar.transform.childCount - 1; i >= 0; i--)
+                {
+                    UnityEngine.Object.Destroy(_tabBar.transform.GetChild(i).gameObject);
+                }
+                _tabBar.SetActive(false);
+            }
+
+            foreach (var el in _elements.Values) { if (el != null) UnityEngine.Object.Destroy(el); }
             _elements.Clear();
-            if (_textScrollContent) foreach (Transform child in _textScrollContent.transform) UnityEngine.Object.Destroy(child.gameObject);
-            if (_buttonScrollContent) foreach (Transform child in _buttonScrollContent.transform) UnityEngine.Object.Destroy(child.gameObject);
-            if (_absoluteContainer) foreach (Transform child in _absoluteContainer.transform) UnityEngine.Object.Destroy(child.gameObject);
+            _pendingSprites.Clear();
+            _tabs.Clear();
+
+            _activeTabContent = null;
+
+            // Re-subscribe after clearing so it's ready for new content
+            ZUI.API.ModRegistry.OnButtonsChanged += OnRegistryChanged;
+        }
+
+        public override void Destroy()
+        {
+            ZUI.API.ModRegistry.OnButtonsChanged -= OnRegistryChanged;
+            base.Destroy();
         }
     }
 }

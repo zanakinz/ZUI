@@ -11,11 +11,12 @@ using ZUI.UI;
 using ZUI.UI.CustomLib.Util;
 using ZUI.UI.ModernLib;
 using ZUI.Utils;
+using ZUI.UI.Components; // Added for GifPlayer
 using HarmonyLib;
 using ProjectM.Scripting;
 using Unity.Entities;
 using UnityEngine;
-using Il2CppInterop.Runtime.Injection; // Required for ClassInjector
+using Il2CppInterop.Runtime.Injection;
 
 namespace ZUI
 {
@@ -78,10 +79,15 @@ namespace ZUI
             Settings = new Settings().InitConfig();
             Theme.Opacity = Settings.UITransparency;
 
-            // Register Custom MonoBehaviours for IL2CPP
+            // --- FIX: Register Custom MonoBehaviours for IL2CPP ---
+            // These MUST be registered here to prevent crashes when adding them to GameObjects.
             ClassInjector.RegisterTypeInIl2Cpp<ImageDownloader>();
+            ClassInjector.RegisterTypeInIl2Cpp<GifPlayer>();
 
-            // Dependencies
+            // --- Initialize Dependencies EARLY ---
+            // We do this in Load() so the flags are ready before the UI is built.
+            // Since DependencyService now defaults to TRUE (assuming server-side presence),
+            // this guarantees buttons show as Available immediately.
             DependencyService.ForceDisableBloodCraft = !Settings.ServerHasBloodCraft;
             DependencyService.ForceDisableKindredCommands = !Settings.ServerHasKindredCommands;
             DependencyService.ForceDisableKinPonds = !Settings.ServerHasKinPonds;
@@ -89,12 +95,14 @@ namespace ZUI
 
             DependencyService.Initialize();
 
+            // Setup Managers
             UIManager = new BCUIManager();
             CoreUpdateBehavior = new CoreUpdateBehavior();
             CoreUpdateBehavior.Setup();
 
             IsInitialized = true;
 
+            // Apply Harmony Patches
             _harmonyBootPatch = Harmony.CreateAndPatchAll(typeof(GameManagerPatch));
             _harmonyMenuPatch = Harmony.CreateAndPatchAll(typeof(EscapeMenuPatch));
             _harmonyCanvasPatch = Harmony.CreateAndPatchAll(typeof(UICanvasSystemPatch));
@@ -104,8 +112,7 @@ namespace ZUI
 
             Log.LogInfo($"Plugin {PluginInfo.PLUGIN_GUID} version {PluginInfo.PLUGIN_VERSION} is loaded!");
 
-            if (IS_TESTING)
-                AddTestUI();
+            if (IS_TESTING) AddTestUI();
         }
 
         public override bool Unload()
@@ -130,6 +137,9 @@ namespace ZUI
             {
                 _client = world;
                 IsGameDataInitialized = true;
+
+                // Dependencies already initialized in Load(), no need to do it here.
+
                 _harmonyBootPatch.UnpatchSelf();
                 _uiInitializedTimer = new FrameTimer();
 
@@ -157,6 +167,6 @@ namespace ZUI
     {
         public const string PLUGIN_GUID = "Zanakinz.ZUI";
         public const string PLUGIN_NAME = "ZUI";
-        public const string PLUGIN_VERSION = "1.1.0";
+        public const string PLUGIN_VERSION = "2.2.0";
     }
 }

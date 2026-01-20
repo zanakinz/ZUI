@@ -64,13 +64,19 @@ namespace ZUI.Services
 
             switch (p.Type)
             {
-                // --- NEW: Register Image from URL ---
-                // Server sends: { "Type": "RegisterImage", "Data": { "Name": "boss.png", "Url": "https://..." } }
                 case "RegisterImage":
                     if (d.ContainsKey("Name") && d.ContainsKey("Url"))
                     {
                         // Trigger background download
                         ImageDownloader.Download(d["Name"], d["Url"]);
+                    }
+                    break;
+
+                case "CreateTab":
+                    if (d.ContainsKey("Name"))
+                    {
+                        string tip = d.ContainsKey("Tip") ? d["Tip"] : "";
+                        ModRegistry.CreateTab(d["Name"], tip);
                     }
                     break;
 

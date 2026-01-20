@@ -7,24 +7,25 @@ namespace ZUI.Services
     /// <summary>
     /// Service to detect if optional mod dependencies are available on the server.
     /// Since most dependencies are server-side mods, we detect them by their runtime behavior
-    /// rather than checking if they're loaded locally.
+    /// or assume they are present based on configuration.
     /// </summary>
     public static class DependencyService
     {
-        // Plugin GUIDs for soft dependencies (for reference only - server-side mods won't be in local plugin list)
+        // Plugin GUIDs for soft dependencies (for reference)
         private const string BLOODCRAFT_GUID = "io.zfolmt.Bloodcraft";
         private const string KINDRED_COMMANDS_GUID = "aa.odjit.KindredCommands";
         private const string KIN_PONDS_GUID = "KinPonds";
         private const string SCARLET_SIGNS_GUID = "ScarletSigns";
 
-        // Runtime detection - assume available unless proven otherwise
-        // Users can manually disable via config if needed
-        private static bool _hasBloodCraft = false;  // Default: assume available
-        private static bool _hasKindredCommands = false;
-        private static bool _hasKinPonds = false;
-        private static bool _hasScarletSigns = false;
+        // Runtime detection flags
+        // Default to TRUE because these are usually Server-Side mods that the Client cannot "see" via Reflection.
+        // We assume they exist until the user disables them in Config or the server tells us otherwise.
+        private static bool _hasBloodCraft = true;
+        private static bool _hasKindredCommands = true;
+        private static bool _hasKinPonds = true;
+        private static bool _hasScarletSigns = true;
 
-        // Manual override flags for user configuration
+        // Manual override flags for user configuration (Set via Plugin.cs Settings)
         public static bool ForceDisableBloodCraft { get; set; } = false;
         public static bool ForceDisableKindredCommands { get; set; } = false;
         public static bool ForceDisableKinPonds { get; set; } = false;
@@ -32,25 +33,21 @@ namespace ZUI.Services
 
         /// <summary>
         /// BloodCraft provides: Familiars, Levels, Class, Quests, Prestige, Combat
-        /// Note: This is a server-side mod, so we assume it's available by default
         /// </summary>
         public static bool HasBloodCraft => !ForceDisableBloodCraft && _hasBloodCraft;
 
         /// <summary>
         /// KindredCommands provides: User commands, Admin commands
-        /// Note: This is a server-side mod, so we assume it's available by default
         /// </summary>
         public static bool HasKindredCommands => !ForceDisableKindredCommands && _hasKindredCommands;
 
         /// <summary>
         /// KinPonds provides: Pond commands
-        /// Note: This is a server-side mod, so we assume it's available by default
         /// </summary>
         public static bool HasKinPonds => !ForceDisableKinPonds && _hasKinPonds;
 
         /// <summary>
         /// ScarletSigns provides: Sign creation/management
-        /// Note: This is a server-side mod, so we assume it's available by default
         /// </summary>
         public static bool HasScarletSigns => !ForceDisableScarletSigns && _hasScarletSigns;
 
@@ -71,7 +68,8 @@ namespace ZUI.Services
         }
 
         /// <summary>
-        /// Log detected dependencies at startup
+        /// Log detected dependencies at startup.
+        /// Updated to check local plugins immediately, but respects Server-Side assumption.
         /// </summary>
         public static void Initialize()
         {
@@ -80,57 +78,45 @@ namespace ZUI.Services
             LogUtils.LogInfo("[DependencyService] ========================================");
             LogUtils.LogInfo("[DependencyService] ");
             LogUtils.LogInfo("[DependencyService] NOTE: BloodCraft, KindredCommands, KinPonds, and ScarletSigns");
-            LogUtils.LogInfo("[DependencyService] are SERVER-SIDE mods and will NOT appear in the client plugin list.");
+            LogUtils.LogInfo("[DependencyService] are typically SERVER-SIDE mods.");
             LogUtils.LogInfo("[DependencyService] ");
             LogUtils.LogInfo("[DependencyService] ZUI assumes these mods are available by default.");
-            LogUtils.LogInfo("[DependencyService] If your server doesn't have a specific mod, you can disable");
-            LogUtils.LogInfo("[DependencyService] related features in the ZUI config file.");
+            LogUtils.LogInfo("[DependencyService] You can disable them in the ZUI config file if needed.");
             LogUtils.LogInfo("[DependencyService] ");
-            
-            // Check for client-side plugins for debugging
-            LogUtils.LogInfo("[DependencyService] Client-side plugins loaded:");
+
+            // Check for client-side plugins for debugging/hybrid scenarios
+            LogUtils.LogInfo("[DependencyService] Client-side plugins loaded (Local):");
             try
             {
-                var clientPlugins = new List<string>();
-                foreach (var plugin in IL2CPPChainloader.Instance.Plugins)
-                {
-                    clientPlugins.Add(plugin.Key);
-                }
-                
-                if (clientPlugins.Count > 0)
-                {
-                    foreach (var guid in clientPlugins)
-                    {
-                        LogUtils.LogInfo($"  ? {guid}");
-                    }
-                }
-                else
-                {
-                    LogUtils.LogInfo("  (None)");
-                }
+                // We check local plugins just to log them, but we don't let a "missing local plugin" 
+                // disable the feature, because it might be on the server.
+                if (CheckLocalPlugin(BLOODCRAFT_GUID)) LogUtils.LogInfo($"  [LOCAL] BloodCraft found.");
+                if (CheckLocalPlugin(KINDRED_COMMANDS_GUID)) LogUtils.LogInfo($"  [LOCAL] KindredCommands found.");
+                if (CheckLocalPlugin(KIN_PONDS_GUID)) LogUtils.LogInfo($"  [LOCAL] KinPonds found.");
+                if (CheckLocalPlugin(SCARLET_SIGNS_GUID)) LogUtils.LogInfo($"  [LOCAL] ScarletSigns found.");
             }
             catch (System.Exception ex)
             {
                 LogUtils.LogError($"[DependencyService] Error listing plugins: {ex.Message}");
             }
-            
+
             LogUtils.LogInfo("[DependencyService] ");
-            LogUtils.LogInfo("[DependencyService] Server-side mod features (assumed available):");
-            LogUtils.LogInfo($"  {(HasBloodCraft ? "?" : "?")} BloodCraft (Familiars, Levels, Class, Quests, Prestige, Combat)");
-            LogUtils.LogInfo($"  {(HasKindredCommands ? "?" : "?")} KindredCommands (User & Admin commands)");
-            LogUtils.LogInfo($"  {(HasKinPonds ? "?" : "?")} KinPonds (Pond commands)");
-            LogUtils.LogInfo($"  {(HasScarletSigns ? "?" : "?")} ScarletSigns (Sign creation)");
+            LogUtils.LogInfo("[DependencyService] Feature Status (Active in Menu):");
+            LogUtils.LogInfo($"  {(HasBloodCraft ? "[YES]" : "[NO ]")} BloodCraft");
+            LogUtils.LogInfo($"  {(HasKindredCommands ? "[YES]" : "[NO ]")} KindredCommands");
+            LogUtils.LogInfo($"  {(HasKinPonds ? "[YES]" : "[NO ]")} KinPonds");
+            LogUtils.LogInfo($"  {(HasScarletSigns ? "[YES]" : "[NO ]")} ScarletSigns");
             LogUtils.LogInfo("[DependencyService] ");
-            
+
             if (ForceDisableBloodCraft || ForceDisableKindredCommands || ForceDisableKinPonds || ForceDisableScarletSigns)
             {
                 LogUtils.LogWarning("[DependencyService] Some features manually disabled via config:");
-                if (ForceDisableBloodCraft) LogUtils.LogWarning("  ? BloodCraft features disabled");
-                if (ForceDisableKindredCommands) LogUtils.LogWarning("  ? KindredCommands features disabled");
-                if (ForceDisableKinPonds) LogUtils.LogWarning("  ? KinPonds features disabled");
-                if (ForceDisableScarletSigns) LogUtils.LogWarning("  ? ScarletSigns features disabled");
+                if (ForceDisableBloodCraft) LogUtils.LogWarning("  - BloodCraft disabled via Config");
+                if (ForceDisableKindredCommands) LogUtils.LogWarning("  - KindredCommands disabled via Config");
+                if (ForceDisableKinPonds) LogUtils.LogWarning("  - KinPonds disabled via Config");
+                if (ForceDisableScarletSigns) LogUtils.LogWarning("  - ScarletSigns disabled via Config");
             }
-            
+
             LogUtils.LogInfo("[DependencyService] ========================================");
         }
 
@@ -155,7 +141,7 @@ namespace ZUI.Services
             {
                 case "bloodcraft":
                     _hasBloodCraft = false;
-                    LogUtils.LogWarning($"[DependencyService] Marked BloodCraft as unavailable (command failed or server doesn't have it)");
+                    LogUtils.LogWarning($"[DependencyService] Marked BloodCraft as unavailable (Server missing mod?)");
                     break;
                 case "kindredcommands":
                     _hasKindredCommands = false;

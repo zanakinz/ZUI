@@ -7,142 +7,98 @@ using BepInEx;
 
 namespace ZUI.Utils
 {
-    /// <summary>
-    /// Utility class for loading sprites from plugin directories or manual registration (URLs).
-    /// Loads images from: 
-    /// 1. Manual Registry (Runtime/Downloaded)
-    /// 2. BepInEx/plugins/{YourPlugin}/Sprites/{filename}
-    /// 3. BepInEx/plugins/Sprites/{filename} (Fallback)
-    /// </summary>
     public static class SpriteLoader
     {
-        // Cache for file-loaded sprites
-        private static readonly Dictionary<string, Sprite> _cachedSprites = new();
+        private static readonly Dictionary<string, Sprite> _cachedSprites = new Dictionary<string, Sprite>();
+        private static readonly Dictionary<string, Sprite> _manualSprites = new Dictionary<string, Sprite>();
+        private static readonly Dictionary<string, List<GifFrame>> _manualGifs = new Dictionary<string, List<GifFrame>>();
+        private static readonly Dictionary<Assembly, string> _pluginPaths = new Dictionary<Assembly, string>();
 
-        // Cache for sprites registered manually (via URL or Base64/Runtime)
-        private static readonly Dictionary<string, Sprite> _manualSprites = new();
-
-        private static readonly Dictionary<Assembly, string> _pluginPaths = new();
-
-        /// <summary>
-        /// Registers a sprite manually into the system. 
-        /// Used for images downloaded via URL or generated at runtime.
-        /// </summary>
         public static void RegisterSprite(string name, Sprite sprite)
         {
             if (string.IsNullOrEmpty(name) || sprite == null) return;
-
-            if (_manualSprites.ContainsKey(name))
-            {
-                // Clean up old sprite if overwriting to prevent leaks
-                var old = _manualSprites[name];
-                if (old != null) UnityEngine.Object.Destroy(old);
-                _manualSprites[name] = sprite;
-            }
-            else
-            {
-                _manualSprites.Add(name, sprite);
-            }
+            _manualSprites[name] = sprite;
         }
 
-        /// <summary>
-        /// Loads a sprite from the calling plugin's directory or the global Sprites folder.
-        /// </summary>
+        public static void RegisterGif(string name, List<GifFrame> frames)
+        {
+            if (string.IsNullOrEmpty(name) || frames == null) return;
+            _manualGifs[name] = frames;
+        }
+
+        public static List<GifFrame> GetGif(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return null;
+            return _manualGifs.TryGetValue(name, out var frames) ? frames : null;
+        }
+
         public static Sprite LoadSprite(string filename, float pixelsPerUnit = 100f, Vector4? border = null)
         {
-            try
-            {
-                var callingAssembly = Assembly.GetCallingAssembly();
-                return LoadSpriteFromAssembly(callingAssembly, filename, pixelsPerUnit, border);
-            }
-            catch (Exception ex)
-            {
-                LogUtils.LogError($"[SpriteLoader] Failed to load sprite '{filename}': {ex.Message}");
-                return null;
-            }
+            return LoadSpriteFromAssembly(Assembly.GetCallingAssembly(), filename, pixelsPerUnit, border);
         }
 
-        /// <summary>
-        /// Loads a sprite from a specific assembly context.
-        /// </summary>
         public static Sprite LoadSpriteFromAssembly(Assembly pluginAssembly, string filename, float pixelsPerUnit = 100f, Vector4? border = null)
         {
             if (string.IsNullOrWhiteSpace(filename)) return null;
 
-            // 1. CHECK MANUAL CACHE FIRST (URL/Runtime images)
-            // This allows downloaded images to override file-based lookups or serve as the primary source
-            if (_manualSprites.TryGetValue(filename, out var manualSprite))
-            {
-                // Ensure the object hasn't been destroyed
-                if (manualSprite != null) return manualSprite;
-                _manualSprites.Remove(filename);
-            }
+            if (_manualSprites.TryGetValue(filename, out var manualSprite)) return manualSprite;
 
-            // 2. Generate cache key for file-based sprites
-            // Handle null assembly gracefully for key generation (Server Packet context)
             string assemblyName = pluginAssembly != null ? pluginAssembly.FullName : "Global";
-            string borderSuffix = border.HasValue ? $"_{border.Value}" : "_0";
-            string cacheKey = $"{assemblyName}|{filename}{borderSuffix}";
+            string cacheKey = $"{assemblyName}|{filename}";
+            if (_cachedSprites.TryGetValue(cacheKey, out var cachedSprite)) return cachedSprite;
 
-            // 3. Check File Cache
-            if (_cachedSprites.TryGetValue(cacheKey, out var cachedSprite))
-            {
-                if (cachedSprite != null && cachedSprite.texture != null)
-                {
-                    return cachedSprite;
-                }
-                _cachedSprites.Remove(cacheKey);
-            }
-
-            // 4. Locate File on Disk
             string imagePath = FindImageFile(pluginAssembly, filename);
-
-            if (string.IsNullOrEmpty(imagePath))
-            {
-                return null;
-            }
+            if (string.IsNullOrEmpty(imagePath)) return null;
 
             try
             {
-                var texture = LoadTexture(imagePath);
-                if (texture == null)
+                byte[] data = File.ReadAllBytes(imagePath);
+
+                // Magic byte check for GIF (G I F)
+                bool isGif = data.Length > 3 && data[0] == 0x47 && data[1] == 0x49 && data[2] == 0x46;
+
+                if (isGif)
                 {
-                    LogUtils.LogError($"[SpriteLoader] Failed to decode texture from: {imagePath}");
+                    var frames = GifDecoder.Decode(data);
+                    if (frames != null && frames.Count > 0)
+                    {
+                        RegisterGif(filename, frames);
+
+                        // --- THE FIX: PREVENT STACKED TEXTURE CREATION ---
+                        // Instead of passing the raw GIF bytes to Unity, we use the decoded texture 
+                        // from the first frame to create our static sprite.
+                        var firstFrameTex = frames[0].Texture;
+                        var sprite = Sprite.Create(
+                            firstFrameTex,
+                            new Rect(0, 0, firstFrameTex.width, firstFrameTex.height),
+                            new Vector2(0.5f, 0.5f),
+                            pixelsPerUnit
+                        );
+
+                        _cachedSprites[cacheKey] = sprite;
+                        return sprite;
+                    }
                     return null;
                 }
 
-                // Apply the 9-slice border if provided
-                Vector4 spriteBorder = border ?? Vector4.zero;
-
-                var sprite = Sprite.Create(
-                    texture,
-                    new Rect(0, 0, texture.width, texture.height),
-                    new Vector2(0.5f, 0.5f), // Pivot Center
-                    pixelsPerUnit,
-                    0,
-                    SpriteMeshType.FullRect,
-                    spriteBorder
-                );
-
-                if (sprite != null)
+                // Standard Image (PNG/JPG)
+                Texture2D texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+                if (texture.LoadImage(data))
                 {
-                    sprite.name = Path.GetFileNameWithoutExtension(filename);
+                    var sprite = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), new Vector2(0.5f, 0.5f), pixelsPerUnit, 0, SpriteMeshType.FullRect, border ?? Vector4.zero);
                     _cachedSprites[cacheKey] = sprite;
+                    return sprite;
                 }
-
-                return sprite;
             }
             catch (Exception ex)
             {
-                LogUtils.LogError($"[SpriteLoader] Error creating sprite from '{imagePath}': {ex.Message}");
-                return null;
+                LogUtils.LogError($"[SpriteLoader] Error: {ex.Message}");
             }
+            return null;
         }
 
         private static string FindImageFile(Assembly assembly, string filename)
         {
-            // Strategy 1: Check BepInEx/plugins/{PluginName}/Sprites/{filename}
-            // Only if assembly is provided
             if (assembly != null)
             {
                 string pluginDir = GetPluginDirectory(assembly);
@@ -150,95 +106,19 @@ namespace ZUI.Utils
                 {
                     string localPath = Path.Combine(pluginDir, "Sprites", filename);
                     if (File.Exists(localPath)) return localPath;
-                }
-            }
-
-            // Strategy 2: Check BepInEx/plugins/Sprites/{filename} (Fallback / Global)
-            try
-            {
-                string globalPath = Path.Combine(Paths.PluginPath, "Sprites", filename);
-                if (File.Exists(globalPath)) return globalPath;
-            }
-            catch { }
-
-            // Strategy 3: Check relative to the DLL (Flat structure)
-            if (assembly != null)
-            {
-                string pluginDir = GetPluginDirectory(assembly);
-                if (!string.IsNullOrEmpty(pluginDir))
-                {
                     string flatPath = Path.Combine(pluginDir, filename);
                     if (File.Exists(flatPath)) return flatPath;
                 }
             }
-
-            return null;
-        }
-
-        public static void ClearCache()
-        {
-            // Clear Manual Cache
-            foreach (var s in _manualSprites.Values)
-            {
-                if (s != null) UnityEngine.Object.Destroy(s);
-            }
-            _manualSprites.Clear();
-
-            // Clear File Cache
-            foreach (var s in _cachedSprites.Values)
-            {
-                if (s != null)
-                {
-                    if (s.texture != null) UnityEngine.Object.Destroy(s.texture);
-                    UnityEngine.Object.Destroy(s);
-                }
-            }
-            _cachedSprites.Clear();
-            _pluginPaths.Clear();
-
-            LogUtils.LogInfo($"[SpriteLoader] Cleared all sprite caches.");
+            string globalPath = Path.Combine(Paths.PluginPath, "Sprites", filename);
+            return File.Exists(globalPath) ? globalPath : null;
         }
 
         private static string GetPluginDirectory(Assembly assembly)
         {
             if (assembly == null) return null;
-
             if (_pluginPaths.TryGetValue(assembly, out var cachedPath)) return cachedPath;
-            try
-            {
-                if (string.IsNullOrEmpty(assembly.Location)) return null;
-
-                var path = Path.GetDirectoryName(assembly.Location);
-                _pluginPaths[assembly] = path;
-                return path;
-            }
-            catch { return null; }
-        }
-
-        private static Texture2D LoadTexture(string filePath)
-        {
-            try
-            {
-                byte[] fileData = File.ReadAllBytes(filePath);
-                Texture2D texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
-
-                texture.filterMode = FilterMode.Bilinear;
-                texture.wrapMode = TextureWrapMode.Clamp;
-
-                if (!texture.LoadImage(fileData))
-                {
-                    LogUtils.LogError($"[SpriteLoader] Texture.LoadImage failed for: {filePath}");
-                    UnityEngine.Object.Destroy(texture);
-                    return null;
-                }
-
-                return texture;
-            }
-            catch (Exception ex)
-            {
-                LogUtils.LogError($"[SpriteLoader] Exception loading texture I/O: {ex.Message}");
-                return null;
-            }
+            try { var path = Path.GetDirectoryName(assembly.Location); _pluginPaths[assembly] = path; return path; } catch { return null; }
         }
     }
 }

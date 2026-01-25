@@ -5,6 +5,7 @@ using System.Text.Json;
 using ZUI.API;
 using ZUI.Utils;
 using ZUI.UI.ModContent;
+using ZUI.Config; // Added for Settings
 
 namespace ZUI.Services
 {
@@ -67,13 +68,23 @@ namespace ZUI.Services
             {
                 // --- AUDIO COMMANDS ---
                 case "RegisterSound":
-                    if (d.ContainsKey("Name") && d.ContainsKey("Url"))
+                    // --- SECURITY CHECK ---
+                    if (Settings.AllowServerAudioDownloads)
                     {
-                        ModRegistry.RegisterAudio(d["Name"], d["Url"]);
+                        if (d.ContainsKey("Name") && d.ContainsKey("Url"))
+                        {
+                            ModRegistry.RegisterAudio(d["Name"], d["Url"]);
+                        }
                     }
+                    else
+                    {
+                        LogUtils.LogWarning("[PacketService] BLOCKED: Server attempted to download audio. Enable 'AllowServerAudioDownloads' in config to allow.");
+                    }
+                    // ----------------------
                     break;
 
                 case "PlaySound":
+                    // PlaySound is fine; it only plays what has successfully been registered/downloaded.
                     if (d.ContainsKey("Name"))
                     {
                         float vol = ParseFloat(d, "Vol", 1.0f);

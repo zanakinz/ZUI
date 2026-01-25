@@ -25,7 +25,7 @@ namespace ZUI.UI.ModContent
         public override Vector2 DefaultAnchorMax => new Vector2(0.5f, 0.5f);
         public override Vector2 DefaultPivot => new Vector2(0.5f, 0.5f);
         public override Vector2 DefaultPosition => new Vector2(0f, Owner.Scaler.m_ReferenceResolution.y);
-        public override bool CanDrag => true;
+        public override bool CanDrag => !Settings.IsUILocked;
         public override PanelDragger.ResizeTypes CanResize => PanelDragger.ResizeTypes.None;
         public override PanelType PanelType => PanelType.Base;
         private GameObject _uiAnchor;
@@ -91,29 +91,28 @@ namespace ZUI.UI.ModContent
             _objectsList = new List<GameObject>();
 
             // Pin button
-            if (CanDrag)
+            // --- FIX: Logic trap removed. Button is now created regardless of 'CanDrag' state. ---
+            var pinButton = UIFactory.CreateToggle(_uiAnchor, "PinButton");
+            UIFactory.SetLayoutElement(pinButton.GameObject, minHeight: 15, preferredHeight: 15, flexibleHeight: 0,
+                minWidth: 15, preferredWidth: 15, flexibleWidth: 0, ignoreLayout: false);
+
+            // --- CHANGE: Set Checkmark Color to Crimson Red ---
+            // #DC143C -> R:0.86, G:0.08, B:0.24
+            if (pinButton.Toggle.graphic != null)
             {
-                var pinButton = UIFactory.CreateToggle(_uiAnchor, "PinButton");
-                UIFactory.SetLayoutElement(pinButton.GameObject, minHeight: 15, preferredHeight: 15, flexibleHeight: 0,
-                    minWidth: 15, preferredWidth: 15, flexibleWidth: 0, ignoreLayout: false);
-
-                // --- CHANGE: Set Checkmark Color to Crimson Red ---
-                // #DC143C -> R:0.86, G:0.08, B:0.24
-                if (pinButton.Toggle.graphic != null)
-                {
-                    pinButton.Toggle.graphic.color = new Color(0.86f, 0.08f, 0.24f, 1f);
-                }
-
-                pinButton.Toggle.isOn = Settings.IsUILocked;
-                IsPinned = Settings.IsUILocked;
-                pinButton.OnValueChanged += (value) =>
-                {
-                    IsPinned = value;
-                    Settings.IsUILocked = value;
-                };
-                _pinToggle = pinButton.Toggle;
-                pinButton.Text.text = " ";
+                pinButton.Toggle.graphic.color = new Color(0.86f, 0.08f, 0.24f, 1f);
             }
+
+            pinButton.Toggle.isOn = Settings.IsUILocked;
+            IsPinned = Settings.IsUILocked;
+            pinButton.OnValueChanged += (value) =>
+            {
+                IsPinned = value;
+                Settings.IsUILocked = value;
+            };
+            _pinToggle = pinButton.Toggle;
+            pinButton.Text.text = " ";
+
             // ZUI Version Label
             var text = UIFactory.CreateLabel(_uiAnchor, "UIAnchorText", $"ZUI 2.2.0");
             UIFactory.SetLayoutElement(text.GameObject, 80, 25, 1, 1);

@@ -16,6 +16,7 @@ using ZUI.UI.UniverseLib.UI.Panels;
 using ZUI.Utils;
 using ZUI.UI.Components;
 using Il2CppInterop.Runtime;
+
 namespace ZUI.UI.ModContent
 {
     public class CustomModPanel : ResizeablePanelBase
@@ -24,6 +25,7 @@ namespace ZUI.UI.ModContent
         public string WindowId { get; private set; }
         public override string PanelId => $"{PluginName}_{WindowId}";
         public override PanelType PanelType => PanelType.Base;
+
         // Dimensions
         private int _initialWidth;
         private int _initialHeight;
@@ -55,14 +57,6 @@ namespace ZUI.UI.ModContent
         // Data Binding System
         private readonly Dictionary<string, Func<string>> _dataContext = new Dictionary<string, Func<string>>();
         private readonly Dictionary<string, ToggleGroup> _radioGroups = new Dictionary<string, ToggleGroup>();
-
-        private class TabContext
-        {
-            public string Name;
-            public GameObject ContentObj;
-            public ButtonRef Button;
-        }
-
         private Dictionary<string, GameObject> _elements = new Dictionary<string, GameObject>();
 
         // This tracks images that are waiting for a download to finish
@@ -73,6 +67,13 @@ namespace ZUI.UI.ModContent
             public string SpriteName;
             public Assembly Assembly;
             public GameObject Owner;
+        }
+
+        private class TabContext
+        {
+            public string Name;
+            public GameObject ContentObj;
+            public ButtonRef Button;
         }
 
         public CustomModPanel(UIBase owner, string pluginName, string windowId, string template) : base(owner)
@@ -454,7 +455,12 @@ namespace ZUI.UI.ModContent
             var inputRef = UIFactory.CreateInputField(parent, id, placeholder);
             PositionElement(inputRef.GameObject, x, y, w, 30);
 
-            _dataContext[id] = () => inputRef.Component.text;
+            _dataContext[id] = () =>
+            {
+                if (inputRef != null && inputRef.Component != null)
+                    return inputRef.Component.text;
+                return "";
+            };
             RegisterElement(id, inputRef.GameObject);
         }
 
@@ -469,7 +475,12 @@ namespace ZUI.UI.ModContent
 
             PositionElement(toggleRef.GameObject, x, y, 150, 25);
 
-            _dataContext[id] = () => toggleRef.Toggle.isOn.ToString().ToLower();
+            _dataContext[id] = () =>
+            {
+                if (toggleRef != null && toggleRef.Toggle != null)
+                    return toggleRef.Toggle.isOn.ToString().ToLower();
+                return "false";
+            };
             RegisterElement(id, toggleRef.GameObject);
         }
 
@@ -491,7 +502,12 @@ namespace ZUI.UI.ModContent
 
             PositionElement(toggleRef.GameObject, x, y, 150, 25);
 
-            _dataContext[id] = () => toggleRef.Toggle.isOn.ToString().ToLower();
+            _dataContext[id] = () =>
+            {
+                if (toggleRef != null && toggleRef.Toggle != null)
+                    return toggleRef.Toggle.isOn.ToString().ToLower();
+                return "false";
+            };
             RegisterElement(id, toggleRef.GameObject);
         }
 
@@ -520,7 +536,12 @@ namespace ZUI.UI.ModContent
 
             sliderComp.onValueChanged.AddListener((val) => { valLabel.TextMesh.text = val.ToString("F2"); });
 
-            _dataContext[id] = () => sliderComp.value.ToString("F2");
+            _dataContext[id] = () =>
+            {
+                if (sliderComp != null)
+                    return sliderComp.value.ToString("F2");
+                return "0";
+            };
             RegisterElement(id, sliderObj);
         }
         public void AddDropdown(string id, List<string> options, int defaultIndex, float x, float y, float w)
@@ -538,7 +559,7 @@ namespace ZUI.UI.ModContent
 
             _dataContext[id] = () =>
             {
-                if (dropdownComp.options.Count > 0 && dropdownComp.value >= 0 && dropdownComp.value < dropdownComp.options.Count)
+                if (dropdownComp != null && dropdownComp.options.Count > 0 && dropdownComp.value >= 0 && dropdownComp.value < dropdownComp.options.Count)
                     return dropdownComp.options[dropdownComp.value].text;
                 return "";
             };
@@ -604,7 +625,6 @@ namespace ZUI.UI.ModContent
             string finalCommand = ParseCommandData(command);
 
             // === ZUI INTERNAL COMMAND INTERCEPTION ===
-            // This prevents "zui_play" from going to chat/server
             if (finalCommand.StartsWith("zui_play", StringComparison.OrdinalIgnoreCase))
             {
                 HandleZuiPlay(finalCommand);
@@ -634,7 +654,8 @@ namespace ZUI.UI.ModContent
                 string key = match.Groups[1].Value;
                 if (_dataContext.TryGetValue(key, out var valueFunc))
                 {
-                    return valueFunc();
+                    string val = valueFunc();
+                    if (val != null) return val;
                 }
                 return match.Value;
             });
@@ -715,6 +736,7 @@ namespace ZUI.UI.ModContent
             RecalculateScrollHeight();
         }
         #endregion
+
         internal override void Reset()
         {
             ZUI.API.ModRegistry.OnButtonsChanged -= OnRegistryChanged;
@@ -744,6 +766,7 @@ namespace ZUI.UI.ModContent
             _tabs.Clear();
 
             _activeTabContent = null;
+            // DO NOT reset _isTemplateMode here. It is set by the public methods ApplyTemplate/SetCustomSize.
 
             ZUI.API.ModRegistry.OnButtonsChanged += OnRegistryChanged;
         }

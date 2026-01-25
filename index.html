@@ -14,6 +14,7 @@
             --border-color: #333;
             --accent-color: #b30000; /* Blood Red */
             --accent-hover: #dc143c;
+            --code-color: #007acc;
             --gold-text: #d4c39c;
             --text-main: #e0e0e0;
             --text-dim: #888;
@@ -25,7 +26,6 @@
         body {
             font-family: 'Inter', sans-serif;
             background-color: var(--bg-dark);
-            /* Use the SVG pattern provided */
             background-image: url('Images/web_bg.svg'); 
             color: var(--text-main);
             height: 100vh;
@@ -34,7 +34,7 @@
             overflow: hidden;
         }
 
-        /* --- Custom Scrollbar --- */
+        /* --- Scrollbar --- */
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #111; }
         ::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
@@ -43,44 +43,25 @@
         /* --- Header --- */
         .header {
             height: 64px;
-            /* Use the Gothic Header SVG */
             background-image: url('Images/web_header.svg');
             background-size: cover;
             background-position: center;
             border-bottom: 2px solid #000;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+            display: flex; align-items: center; justify-content: space-between;
             padding: 0 25px;
             box-shadow: 0 5px 20px rgba(0,0,0,0.8);
             z-index: 100;
         }
 
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
+        .brand { display: flex; align-items: center; gap: 15px; }
         .brand h1 { 
-            font-family: 'Cinzel', serif; 
-            font-size: 24px; 
-            font-weight: 700; 
-            color: var(--gold-text);
-            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
-            letter-spacing: 1px;
+            font-family: 'Cinzel', serif; font-size: 24px; font-weight: 700; 
+            color: var(--gold-text); text-shadow: 0 2px 4px rgba(0,0,0,0.8); letter-spacing: 1px;
         }
-        
         .brand .badge { 
-            background: #2a0a0a; 
-            border: 1px solid var(--accent-color);
-            color: var(--accent-color);
-            padding: 2px 8px; 
-            border-radius: 4px; 
-            font-size: 10px; 
-            font-weight: bold; 
-            font-family: 'Inter', sans-serif;
-            letter-spacing: 0.5px;
+            background: #2a0a0a; border: 1px solid var(--accent-color); color: var(--accent-color);
+            padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; 
+            font-family: 'Inter', sans-serif; letter-spacing: 0.5px;
         }
 
         .toolbar { display: flex; gap: 15px; }
@@ -94,31 +75,20 @@
             background: rgba(20, 20, 20, 0.95);
             backdrop-filter: blur(10px);
             border-right: 1px solid var(--border-color);
-            display: flex;
-            flex-direction: column;
+            display: flex; flex-direction: column;
             box-shadow: 5px 0 20px rgba(0,0,0,0.3);
             z-index: 90;
         }
 
-        .scroll-area {
-            padding: 25px;
-            overflow-y: auto;
-            flex: 1;
-        }
+        .scroll-area { padding: 25px; overflow-y: auto; flex: 1; }
 
         .section-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+            display: flex; align-items: center; justify-content: space-between;
             margin-bottom: 15px;
         }
-
         .section-title {
-            font-family: 'Cinzel', serif;
-            font-size: 14px;
-            color: var(--gold-text);
-            font-weight: 700;
-            letter-spacing: 1px;
+            font-family: 'Cinzel', serif; font-size: 14px; color: var(--gold-text);
+            font-weight: 700; letter-spacing: 1px;
         }
 
         .divider {
@@ -127,38 +97,23 @@
             background-repeat: no-repeat;
             background-position: center;
             background-size: contain;
-            margin: 20px 0;
-            opacity: 0.8;
+            margin: 20px 0; opacity: 0.8;
         }
 
         /* --- Controls --- */
         .control-group { margin-bottom: 15px; }
         .control-group label { 
-            display: block; 
-            margin-bottom: 8px; 
-            font-size: 11px; 
-            text-transform: uppercase;
-            color: var(--text-dim); 
-            letter-spacing: 0.5px;
-            font-weight: 600;
+            display: block; margin-bottom: 8px; font-size: 11px; 
+            text-transform: uppercase; color: var(--text-dim); letter-spacing: 0.5px; font-weight: 600;
         }
 
         input[type="text"], input[type="number"], select, textarea {
-            width: 100%;
-            background: var(--input-bg);
-            border: 1px solid var(--border-color);
-            color: var(--text-main);
-            padding: 10px;
-            border-radius: 4px;
-            font-family: 'Inter', sans-serif;
-            font-size: 13px;
-            transition: all 0.2s;
+            width: 100%; background: var(--input-bg); border: 1px solid var(--border-color);
+            color: var(--text-main); padding: 10px; border-radius: 4px;
+            font-family: 'Inter', sans-serif; font-size: 13px; transition: all 0.2s;
         }
-
         input:focus, select:focus, textarea:focus {
-            outline: none;
-            border-color: var(--accent-color);
-            background: #252525;
+            outline: none; border-color: var(--accent-color); background: #252525;
             box-shadow: 0 0 0 2px rgba(179, 0, 0, 0.1);
         }
 
@@ -167,74 +122,63 @@
 
         /* Color Picker */
         .color-picker {
-            display: flex;
-            align-items: center;
-            background: var(--input-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            padding: 5px;
-            cursor: pointer;
+            display: flex; align-items: center; background: var(--input-bg);
+            border: 1px solid var(--border-color); border-radius: 4px; padding: 5px; cursor: pointer;
         }
         .color-picker input {
-            width: 30px; height: 30px;
-            padding: 0; border: none; background: none;
-            cursor: pointer;
+            width: 30px; height: 30px; padding: 0; border: none; background: none; cursor: pointer;
         }
         .color-picker span {
-            margin-left: 10px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 12px;
-            color: #888;
+            margin-left: 10px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #888;
         }
 
         /* --- Buttons --- */
         .btn {
             background: linear-gradient(to bottom, #2a2a2a, #1a1a1a);
-            color: #ccc;
-            border: 1px solid #444;
-            padding: 8px 16px;
-            border-radius: 3px;
-            cursor: pointer;
-            font-family: 'Inter', sans-serif;
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            transition: all 0.2s;
-            display: inline-flex; align-items: center; gap: 8px;
+            color: #ccc; border: 1px solid #444; padding: 8px 16px; border-radius: 3px;
+            cursor: pointer; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.2s;
+            display: inline-flex; align-items: center; gap: 8px; justify-content: center;
         }
-
-        .btn:hover {
-            color: #fff;
-            border-color: #666;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-        }
+        .btn:hover { color: #fff; border-color: #666; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
 
         .btn-primary {
             background: linear-gradient(to bottom, var(--accent-color), #800000);
-            border-color: #600000;
-            color: #fff;
+            border-color: #600000; color: #fff;
         }
         .btn-primary:hover {
             background: linear-gradient(to bottom, #ff1a1a, #b30000);
-            border-color: #ff3333;
-            box-shadow: 0 0 15px rgba(179, 0, 0, 0.4);
+            border-color: #ff3333; box-shadow: 0 0 15px rgba(179, 0, 0, 0.4);
+        }
+
+        .btn-danger {
+            border-color: #552222; color: #ff6b6b; background: rgba(50,10,10,0.5);
+        }
+        .btn-danger:hover {
+            background: rgba(80,20,20,0.8); color: #fff; border-color: #aa3333;
         }
         
-        .btn-full { width: 100%; justify-content: center; padding: 12px; }
-        .btn-danger { border-color: #552222; color: #ff6b6b; background: rgba(50,10,10,0.5); }
-        .btn-danger:hover { background: rgba(80,20,20,0.8); color: #fff; }
+        .btn-full { width: 100%; padding: 12px; }
+        .btn-sm { padding: 4px 8px; font-size: 10px; }
+
+        /* --- Tabs UI in Sidebar --- */
+        .tab-manager {
+            background: #111; border: 1px solid #333; padding: 10px; border-radius: 4px;
+        }
+        .tab-list { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+        .tab-chip {
+            font-size: 11px; padding: 4px 8px; background: #222; border: 1px solid #444;
+            color: #888; border-radius: 3px; cursor: pointer;
+        }
+        .tab-chip.active {
+            background: var(--accent-color); color: #fff; border-color: #ff3333;
+        }
+        .tab-chip:hover { border-color: #666; }
 
         /* --- Canvas Area --- */
         .canvas-area {
-            flex: 1;
-            position: relative;
-            overflow: auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 50px;
-            /* Grid Pattern */
+            flex: 1; position: relative; overflow: auto; display: flex;
+            align-items: center; justify-content: center; padding: 50px;
             background-image: 
                 linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
                 linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
@@ -242,189 +186,177 @@
         }
 
         .canvas-wrapper {
-            position: relative;
-            box-shadow: 0 0 50px 10px rgba(0,0,0,0.5);
-            border: 2px solid #222;
-            transition: width 0.3s, height 0.3s;
+            position: relative; box-shadow: 0 0 50px 10px rgba(0,0,0,0.5);
+            border: 2px solid #222; transition: width 0.3s, height 0.3s;
         }
 
         .canvas {
             position: relative;
-            /* Use panel.png as background, fallback to gradient */
-            background-image: url('Images/panel.png');
-            background-size: 100% 100%;
-            background-color: #1a1a1a;
-            overflow: hidden; /* Simulates RectMask2D */
+            background-image: url('Images/panel.png'); /* Fallback */
+            background-size: 100% 100%; background-color: #1a1a1a;
+            overflow: hidden; 
         }
 
         /* --- Draggable Elements --- */
         .element {
-            position: absolute;
-            border: 1px solid transparent;
-            cursor: move;
-            user-select: none;
-            box-sizing: border-box;
-            overflow: hidden;
+            position: absolute; border: 1px solid transparent; cursor: move;
+            user-select: none; box-sizing: border-box; overflow: hidden;
+            display: flex; align-items: center; justify-content: center;
         }
+        .element:hover { border: 1px dashed rgba(255,255,255,0.3); background: rgba(255,255,255,0.02); }
+        .element.selected { border: 1px solid var(--accent-color); z-index: 100; box-shadow: 0 0 10px rgba(220, 20, 60, 0.2); }
+        
+        /* Ghost Tabs */
+        .element.hidden-tab { display: none; }
+        .element.ghost-tab { opacity: 0.15; pointer-events: none; filter: grayscale(100%); }
 
-        .element:hover {
-            border: 1px dashed rgba(255,255,255,0.3);
-            background: rgba(255,255,255,0.02);
-        }
-
-        .element.selected {
-            border: 1px solid var(--accent-color);
-            z-index: 100;
-            box-shadow: 0 0 10px rgba(220, 20, 60, 0.2);
+        .element.has-attachment::after {
+            content: '📎'; position: absolute; top: -8px; right: -8px; 
+            font-size: 14px; background: #000; border-radius: 50%; width: 20px; height: 20px;
+            display: flex; align-items: center; justify-content: center; border: 1px solid gold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.8); z-index: 200;
         }
 
         /* Element Visuals */
-        .el-text { font-size: 14px; white-space: nowrap; pointer-events: none; }
-        
+        .el-text { font-size: 14px; white-space: nowrap; justify-content: flex-start; }
         .el-title {
-            font-family: 'Cinzel', serif;
-            font-size: 18px; 
-            font-weight: bold; 
-            text-align: center; 
-            pointer-events: none;
-            text-shadow: 0 2px 2px rgba(0,0,0,1);
+            font-family: 'Cinzel', serif; font-size: 18px; font-weight: bold; 
+            text-align: center; text-shadow: 0 2px 2px rgba(0,0,0,1);
         }
-
         .el-button {
-            /* Use button.png */
-            background-image: url('Images/button.png');
-            background-size: 100% 100%;
-            display: flex; align-items: center; justify-content: center;
+            background-image: url('Images/button.png'); background-size: 100% 100%;
             color: #dcdcdc; font-size: 14px; font-family: 'Inter', sans-serif;
             text-shadow: 0 1px 2px rgba(0,0,0,0.8);
-            pointer-events: none; /* Let parent handle drag */
         }
-
         .el-category {
-            /* Use subpanel_inlet.png if available, or fallback style */
-            background: rgba(0,0,0,0.3);
-            border-bottom: 2px solid rgba(255, 215, 0, 0.3);
-            display: flex; align-items: center; padding-left: 10px;
+            background: rgba(0,0,0,0.3); border-bottom: 2px solid rgba(255, 215, 0, 0.3);
+            justify-content: flex-start; padding-left: 10px;
             color: #ffd700; font-weight: bold; font-size: 12px; text-transform: uppercase;
-            pointer-events: none;
         }
-
         .el-image {
-            background: rgba(255,255,255,0.05);
-            border: 1px dashed #444;
-            display: flex; align-items: center; justify-content: center;
-            color: #666; font-size: 11px;
-            pointer-events: none;
+            background: rgba(255,255,255,0.05); border: 1px dashed #444; color: #666; font-size: 11px;
         }
+        
+        /* New UI Types */
+        .el-input {
+            background: #000; border: 1px solid #444; color: #666;
+            font-family: 'JetBrains Mono', monospace; font-size: 11px; padding-left: 5px; justify-content: flex-start;
+        }
+        .el-toggle {
+            justify-content: flex-start; gap: 8px; font-size: 12px; color: #ccc;
+        }
+        .el-toggle::before {
+            content: ''; width: 14px; height: 14px; border: 1px solid #666; background: #222; display: block;
+        }
+        .el-radio {
+            justify-content: flex-start; gap: 8px; font-size: 12px; color: #ccc;
+        }
+        .el-radio::before {
+            content: ''; width: 14px; height: 14px; border: 1px solid #666; background: #222; border-radius: 50%; display: block;
+        }
+        .el-slider {
+            background: #222; border-radius: 10px; border: 1px solid #444;
+        }
+        .el-slider::after {
+            content: ''; width: 10px; height: 100%; background: var(--accent-color); position: absolute; left: 30%; top:0;
+        }
+        .el-dropdown {
+            background: #111; border: 1px solid #444; color: #ddd; justify-content: space-between; padding: 0 10px; font-size: 12px;
+        }
+        .el-dropdown::after { content: '▼'; font-size: 8px; color: #888; }
 
-        /* Handles */
+
         .resize-handle {
-            width: 10px; height: 10px;
-            background: var(--accent-color);
-            position: absolute; bottom: 0; right: 0;
-            cursor: nwse-resize; display: none;
-            clip-path: polygon(100% 0, 100% 100%, 0 100%);
+            width: 10px; height: 10px; background: var(--accent-color); position: absolute; bottom: 0; right: 0;
+            cursor: nwse-resize; display: none; clip-path: polygon(100% 0, 100% 100%, 0 100%);
+            pointer-events: auto;
         }
         .element.selected .resize-handle { display: block; }
 
         /* --- List Items --- */
         .list-item {
-            background: rgba(255,255,255,0.03);
-            border: 1px solid transparent;
-            padding: 8px 12px;
-            border-radius: 4px;
-            margin-bottom: 4px;
-            display: flex; justify-content: space-between; align-items: center;
-            font-size: 12px;
-            cursor: pointer;
-            transition: all 0.1s;
+            background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 4px;
+            margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center;
+            font-size: 12px; cursor: pointer; transition: all 0.1s; border-left: 3px solid transparent;
         }
         .list-item:hover { background: rgba(255,255,255,0.06); }
-        .list-item.active { 
-            background: rgba(220, 20, 60, 0.15); 
-            border-color: rgba(220, 20, 60, 0.3); 
-        }
+        .list-item.active { background: rgba(220, 20, 60, 0.15); border-left-color: var(--accent-color); }
         .list-tag { 
-            font-family: 'JetBrains Mono', monospace; 
-            font-size: 10px; 
-            background: #000; 
-            padding: 2px 4px; 
-            border-radius: 3px; 
-            color: #888; 
-            margin-right: 8px;
+            font-family: 'JetBrains Mono', monospace; font-size: 10px; background: #000; 
+            padding: 2px 4px; border-radius: 3px; color: #888; margin-right: 8px; width: 35px; text-align: center; display: inline-block;
         }
-        .list-del { opacity: 0; color: #ff6b6b; font-weight: bold; }
-        .list-item:hover .list-del { opacity: 1; }
+        .list-tag.csharp { background: var(--code-color); color: white; width: auto; padding: 2px 6px; }
 
-        /* --- Modal --- */
+        /* --- Modals & Context --- */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85);
-            backdrop-filter: blur(5px);
-            z-index: 1000;
-            display: none;
-            align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.85); backdrop-filter: blur(5px);
+            z-index: 1000; display: none; align-items: center; justify-content: center;
         }
         .modal {
-            width: 800px; height: 600px;
-            background: #1a1a1a;
-            border: 1px solid #444;
-            border-radius: 6px;
-            box-shadow: 0 20px 50px #000;
-            display: flex; flex-direction: column;
+            width: 900px; height: 80vh; /* Forced Height */
+            background: #1a1a1a; border: 1px solid #444;
+            border-radius: 6px; box-shadow: 0 20px 50px #000; display: flex; flex-direction: column;
         }
+        .modal-sm { width: 500px; height: auto; }
+        
         .modal-header {
-            padding: 15px 20px;
-            border-bottom: 1px solid #333;
-            display: flex; justify-content: space-between; align-items: center;
-            background: #222;
+            padding: 15px 20px; border-bottom: 1px solid #333; 
+            display: flex; justify-content: space-between; align-items: center; background: #222;
+            flex-shrink: 0;
         }
-        .modal-body { flex: 1; position: relative; }
+        
+        .modal-body { 
+            flex: 1; display: flex; flex-direction: column; 
+            padding: 20px; overflow: hidden; position: relative; 
+        }
+        
         .code-area {
-            width: 100%; height: 100%;
-            background: #111;
-            color: #d4d4d4;
-            border: none; resize: none; padding: 20px;
-            font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.5;
-            outline: none;
+            flex: 1; width: 100%; background: #111; color: #d4d4d4;
+            border: none; resize: none; padding: 15px; 
+            font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.5; outline: none;
         }
 
-        /* Toggle */
+        .context-menu {
+            position: absolute; width: 220px; background: #222; border: 1px solid #444;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5); z-index: 999; display: none; flex-direction: column;
+        }
+        .ctx-item {
+            padding: 12px 15px; font-size: 12px; color: #ddd; cursor: pointer; border-bottom: 1px solid #333;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .ctx-item:hover { background: var(--accent-color); color: #fff; }
+        .ctx-item:last-child { border-bottom: none; }
+
         .toggle-group {
-            background: #111;
-            border: 1px solid #333;
-            border-radius: 4px;
-            display: flex; padding: 2px;
+            background: #111; border: 1px solid #333; border-radius: 4px; display: flex; padding: 2px;
         }
-        .toggle-opt {
-            padding: 6px 12px; font-size: 12px; color: #888; cursor: pointer; border-radius: 3px;
-        }
-        .toggle-opt.active {
-            background: var(--accent-color); color: #fff; font-weight: 600;
+        .toggle-opt { padding: 6px 12px; font-size: 12px; color: #888; cursor: pointer; border-radius: 3px; }
+        .toggle-opt.active { background: var(--accent-color); color: #fff; font-weight: 600; }
+        
+        /* Checkbox Style */
+        .check-opt { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 11px; color: #888; margin-top: 5px; }
+        .check-opt input { width: auto; }
+
+        /* Warning Box */
+        .warning-box {
+            background: rgba(100, 20, 20, 0.4); border: 1px solid #800; color: #ff8888;
+            padding: 10px; font-size: 12px; margin-bottom: 10px; display: none; flex-shrink: 0;
         }
 
     </style>
 </head>
-<body>
+<body onclick="hideContextMenu()">
 
     <div class="header">
         <div class="brand">
             <h1>ZUI Designer</h1>
-            <span class="badge">GOTHIC EDITION v1.1</span>
+            <span class="badge">GOTHIC EDITION v1.2</span>
         </div>
         <div class="toolbar">
-            <button class="btn" onclick="document.getElementById('fileInput').click()">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-                Load JSON
-            </button>
-            <button class="btn" onclick="saveLayout()">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                Save
-            </button>
-            <button class="btn btn-primary" onclick="showCodeModal()">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
-                Generate Code
-            </button>
+            <button class="btn" onclick="document.getElementById('fileInput').click()">Load JSON</button>
+            <button class="btn" onclick="saveLayout()">Save</button>
+            <button class="btn btn-primary" onclick="showCodeModal()">Generate Code</button>
         </div>
     </div>
 
@@ -434,67 +366,148 @@
         <div class="sidebar">
             <div class="scroll-area">
                 
+                <!-- CANVAS PROPS -->
                 <div class="section-header">
-                    <span class="section-title">Canvas Properties</span>
+                    <span class="section-title">Canvas & Tabs</span>
                 </div>
-
                 <div class="row">
                     <div class="col">
                         <label>Width</label>
-                        <input type="number" id="canvasWidth" value="500" onchange="updateCanvasSize()">
+                        <input type="number" id="canvasWidth" value="600" onchange="updateCanvasSize()">
                     </div>
                     <div class="col">
                         <label>Height</label>
-                        <input type="number" id="canvasHeight" value="350" onchange="updateCanvasSize()">
+                        <input type="number" id="canvasHeight" value="450" onchange="updateCanvasSize()">
                     </div>
                 </div>
-                <div class="control-group" style="margin-top:10px;">
-                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
-                        <input type="checkbox" id="snapToGrid" checked> Snap to Grid (10px)
+
+                <div class="control-group" style="margin-top: 15px;">
+                    <label>Active Tab</label>
+                    <div class="tab-manager">
+                        <div class="tab-list" id="tabListDisplay">
+                            <!-- JS fills this -->
+                        </div>
+                        <div class="row">
+                            <input type="text" id="newTabName" placeholder="New Tab Name">
+                            <button class="btn btn-sm" onclick="addTab()">+</button>
+                        </div>
+                        <button class="btn btn-danger btn-full btn-sm" style="margin-top:8px;" onclick="deleteCurrentTab()">
+                            Delete Active Tab
+                        </button>
+                    </div>
+                    
+                    <label class="check-opt">
+                        <input type="checkbox" id="showGhosts" onchange="render()">
+                        Show Inactive Tabs (Shadow)
                     </label>
                 </div>
 
                 <div class="divider"></div>
 
+                <!-- ELEMENT TOOLBOX -->
                 <div class="section-header">
-                    <span class="section-title">Element Toolbox</span>
+                    <span class="section-title">Element Properties</span>
+                    <small style="color:var(--accent-color); cursor:pointer;" onclick="deselectElement()">Deselect</small>
                 </div>
 
                 <div class="control-group">
                     <label>Type</label>
-                    <select id="elementType">
+                    <select id="elementType" onchange="onTypeChanged()">
 					    <option value="title">Window Title</option>
+                        <option value="category">Category Header</option>
                         <option value="text">Text Label</option>
                         <option value="button">Button</option>
-                        <option value="category">Category Header</option>
-                        <option value="image">Image / Sprite</option>
+                        <option value="image">Image / GIF</option>
+                        <option disabled>--- DATA INPUTS ---</option>
+                        <option value="input">Text Input Field</option>
+                        <option value="slider">Slider</option>
+                        <option value="toggle">Checkbox Toggle</option>
+                        <option value="radio">Radio Button</option>
+                        <option value="dropdown">Dropdown List</option>
                     </select>
                 </div>
 
-                <!-- Dynamic Inputs -->
+                <!-- Dynamic Properties -->
                 <div id="propContainer">
-                    <div class="control-group" id="propText">
-                        <label>Content</label>
-                        <input type="text" id="elText" value="Label Text">
+                    <div class="control-group" id="propID">
+                        <label>Element ID (Required)</label>
+                        <input type="text" id="elID" placeholder="e.g. input_name" oninput="onPropChange('id', this.value)">
                     </div>
 
+                    <div class="control-group" id="propText">
+                        <label id="lblText">Label / Content</label>
+                        <input type="text" id="elText" value="Label Text" oninput="onPropChange('text', this.value)">
+                    </div>
+
+                    <!-- Command / Callback Section -->
                     <div class="control-group" id="propCommand" style="display:none">
-                        <label>Chat Command</label>
-                        <input type="text" id="elCommand" placeholder=".heal">
+                        
+                        <label class="check-opt" style="margin-bottom:8px;">
+                            <input type="checkbox" id="elIsCallback" onchange="onPropChange('isCallback', this.checked); updateCallbackInput()">
+                            Use C# Action (Client Only)
+                        </label>
+
+                        <div id="callbackOptions" style="display:none;">
+                            <label>Action Type</label>
+                            <select id="elCallbackType" onchange="onPropChange('callbackType', this.value); updateCallbackInput()">
+                                <option value="custom">Custom (Manual)</option>
+                                <option value="playsound">PlaySound (Preset)</option>
+                            </select>
+                        </div>
+
+                        <div id="cmdInputArea" style="margin-top:8px;">
+                            <label id="lblCommand">Chat Command</label>
+                            <input type="text" id="elCommand" placeholder=".heal {id}" oninput="onPropChange('command', this.value)">
+                        </div>
+
+                        <!-- PlaySound Specifics -->
+                        <div id="soundOptions" style="display:none; margin-top:10px; padding:10px; background:#222; border:1px dashed #444;">
+                            <label style="color:var(--gold-text);">Audio Filename</label>
+                            <input type="text" id="elSoundFile" placeholder="levelup.wav" oninput="onPropChange('soundFile', this.value); syncSoundToLocal()">
+                            <div class="row" style="margin-top:5px;">
+                                <div class="col">
+                                    <label>Volume</label>
+                                    <input type="number" id="elSoundVol" value="1.0" step="0.1" oninput="onPropChange('soundVol', this.value)">
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Input Specifics -->
+                    <div class="control-group" id="propPlaceholder" style="display:none">
+                        <label>Placeholder Text</label>
+                        <input type="text" id="elPlaceholder" placeholder="Enter text..." oninput="onPropChange('placeholder', this.value)">
+                    </div>
+
+                    <div class="control-group" id="propSlider" style="display:none">
+                        <div class="row">
+                            <div class="col"><label>Min</label><input type="number" id="elMin" value="0" oninput="onPropChange('min', this.value)"></div>
+                            <div class="col"><label>Max</label><input type="number" id="elMax" value="100" oninput="onPropChange('max', this.value)"></div>
+                            <div class="col"><label>Def</label><input type="number" id="elDef" value="50" oninput="onPropChange('def', this.value)"></div>
+                        </div>
+                    </div>
+
+                    <div class="control-group" id="propDropdown" style="display:none">
+                        <label>Options (Comma Separated)</label>
+                        <input type="text" id="elOptions" placeholder="Option A,Option B,Option C" oninput="onPropChange('options', this.value)">
+                    </div>
+
+                    <div class="control-group" id="propRadio" style="display:none">
+                        <label>Group Name</label>
+                        <input type="text" id="elGroup" placeholder="my_radio_group" oninput="onPropChange('group', this.value)">
                     </div>
 
                     <div class="control-group" id="propColor">
                         <label>Color</label>
                         <div class="color-picker" onclick="document.getElementById('elColor').click()">
-                            <input type="color" id="elColor" value="#e0e0e0">
+                            <input type="color" id="elColor" value="#e0e0e0" oninput="onPropChange('color', this.value); document.getElementById('colorHex').innerText = this.value">
                             <span id="colorHex">#e0e0e0</span>
                         </div>
                     </div>
                 </div>
 
-                <button class="btn btn-primary btn-full" onclick="addElement()">
-                    + Add Element
-                </button>
+                <button class="btn btn-primary btn-full" onclick="addElement()">+ Add New Element</button>
 
                 <div class="divider"></div>
 
@@ -522,33 +535,81 @@
         <div class="modal">
             <div class="modal-header">
                 <h3 style="color:var(--text-main);">Export Source Code</h3>
-                
                 <div class="toggle-group">
                     <div class="toggle-opt active" id="modeClient" onclick="setGenMode('client')">Client (Reflection)</div>
                     <div class="toggle-opt" id="modeServer" onclick="setGenMode('server')">Server (Packet)</div>
                 </div>
-                
                 <button class="btn" onclick="document.getElementById('codeModal').style.display='none'">✕</button>
             </div>
             <div class="modal-body">
+                <div id="codeWarning" class="warning-box"></div>
                 <textarea class="code-area" id="codeOutput" readonly></textarea>
             </div>
-            <div class="modal-header" style="border-top:1px solid #333; border-bottom:none; background:#1a1a1a;">
-                <span style="font-size:11px; color:#666;">Generated for ZUI Framework v1.1</span>
+            <div class="modal-header" style="border-top:1px solid #333; background:#1a1a1a;">
+                <span style="font-size:11px; color:#666;">Generated for ZUI v2.2.0</span>
                 <button class="btn btn-primary" onclick="copyCode()">Copy to Clipboard</button>
             </div>
         </div>
     </div>
 
-    <!-- Hidden Input -->
+    <!-- ATTACHMENT MODAL -->
+    <div class="modal-overlay" id="attachModal">
+        <div class="modal modal-sm">
+            <div class="modal-header">
+                <h3>Attachment Linker</h3>
+                <button class="btn" onclick="document.getElementById('attachModal').style.display='none'">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="control-group">
+                    <label style="color:var(--text-main);">Local Filename / Reflection ID</label>
+                    <small style="color:#666; display:block; margin-bottom:5px;">Required for Client Mode. Example: logo.png</small>
+                    <input type="text" id="attachLocal" placeholder="filename.png" style="padding:12px;">
+                </div>
+
+                <div class="control-group" id="groupRemote" style="display:none; margin-top:15px; border-top:1px dashed #333; padding-top:15px;">
+                    <label style="color:var(--gold-text);">Server Packet URL (Advanced)</label>
+                    <small style="color:#666; display:block; margin-bottom:5px;">Required for Server Mode. Example: https://site.com/file.png</small>
+                    <input type="text" id="attachRemote" placeholder="https://..." style="padding:12px;">
+                </div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
+                     <button class="btn btn-sm" onclick="document.getElementById('groupRemote').style.display='block'">+ Add Packet URL</button>
+                </div>
+
+                <div style="display:flex; gap:10px; margin-top:20px;">
+                    <button class="btn btn-danger btn-full" onclick="clearAttachment()">Remove</button>
+                    <button class="btn btn-primary btn-full" onclick="saveAttachment()">Save Attachment</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONTEXT MENU -->
+    <div class="context-menu" id="ctxMenu">
+        <div class="ctx-item" id="ctxEditCallback" onclick="focusCallbackSettings()" style="display:none; color:var(--code-color);">
+            <span style="font-size:16px;">⚙️</span> Edit Callback...
+        </div>
+        <div class="ctx-item" onclick="openAttachModal()">
+            <span style="font-size:16px;">📎</span> Add/Edit Attachment...
+        </div>
+        <div class="ctx-item" style="color:#ff6b6b;" onclick="removeSelected()">
+            <span style="font-size:16px;">✕</span> Delete Element
+        </div>
+    </div>
+
+    <!-- Hidden File Input -->
     <input type="file" id="fileInput" accept=".json" style="display:none" onchange="loadFile(event)">
 
     <script>
-        // --- DATA STATE ---
+        // --- STATE ---
         let elements = [];
+        let tabs = ["Main"];
+        let currentTab = "Main";
         let selectedId = null;
-        let genMode = 'client'; // 'client' or 'server'
+        let genMode = 'client';
         let idCounter = 0;
+        let ctxTargetId = null;
+        let isMapping = false; 
 
         // --- DRAG STATE ---
         let dragTarget = null;
@@ -557,42 +618,165 @@
 
         // --- INIT ---
         updateCanvasSize();
-        updateInputs();
-
-        // --- EVENT LISTENERS ---
-        document.getElementById('elementType').addEventListener('change', updateInputs);
-        document.getElementById('elColor').addEventListener('input', (e) => {
-            document.getElementById('colorHex').innerText = e.target.value;
-        });
+        updateTabs();
+        updateInputVisibility();
 
         // --- UI LOGIC ---
-        function updateInputs() {
+        function updateTabs() {
+            const container = document.getElementById('tabListDisplay');
+            container.innerHTML = '';
+            tabs.forEach(t => {
+                const chip = document.createElement('div');
+                chip.className = `tab-chip ${t === currentTab ? 'active' : ''}`;
+                chip.innerText = t;
+                chip.onclick = () => { currentTab = t; updateTabs(); render(); };
+                container.appendChild(chip);
+            });
+        }
+
+        function addTab() {
+            const name = document.getElementById('newTabName').value.trim();
+            if(name && !tabs.includes(name)) {
+                tabs.push(name);
+                document.getElementById('newTabName').value = '';
+                currentTab = name; // Auto-switch to new tab
+                updateTabs();
+                render();
+            }
+        }
+
+        function deleteCurrentTab() {
+            if(tabs.length <= 1) {
+                alert("Cannot delete the last remaining tab. A window must have at least one tab.");
+                return;
+            }
+
+            if(confirm(`Are you sure you want to delete '${currentTab}' and all its elements?`)) {
+                // Delete elements EXCEPT Title
+                elements = elements.filter(e => e.tab !== currentTab || e.type === 'title');
+                
+                const idx = tabs.indexOf(currentTab);
+                if(idx > -1) tabs.splice(idx, 1);
+                
+                currentTab = tabs[Math.max(0, idx - 1)];
+                
+                // Reassign Title to new current tab
+                const titleEl = elements.find(e => e.type === 'title');
+                if(titleEl) titleEl.tab = currentTab;
+
+                updateTabs();
+                render();
+            }
+        }
+
+        // --- INPUT HANDLING ---
+        
+        function onTypeChanged() {
+            updateInputVisibility();
+            
+            if (selectedId) {
+                const el = elements.find(e => e.uid === selectedId);
+                if (el) {
+                    el.type = document.getElementById('elementType').value;
+                    render();
+                }
+            } else {
+                applyTypeDefaults();
+            }
+        }
+
+        function updateInputVisibility() {
             const type = document.getElementById('elementType').value;
-            const props = {
-                text: { text: true, cmd: false, color: true },
-                button: { text: true, cmd: true, color: false }, // Buttons use sprites, no color needed usually
-                category: { text: true, cmd: false, color: true },
-                image: { text: true, cmd: false, color: false },
-                title: { text: true, cmd: false, color: true }
-            };
+            const setDisplay = (id, show) => document.getElementById(id).style.display = show ? 'block' : 'none';
+            
+            setDisplay('propText', true);
+            setDisplay('propColor', true);
+            setDisplay('propID', false);
+            setDisplay('propCommand', false);
+            setDisplay('propPlaceholder', false);
+            setDisplay('propSlider', false);
+            setDisplay('propDropdown', false);
+            setDisplay('propRadio', false);
 
-            const p = props[type];
-            document.getElementById('propText').style.display = p.text ? 'block' : 'none';
-            document.getElementById('propCommand').style.display = p.cmd ? 'block' : 'none';
-            document.getElementById('propColor').style.display = p.color ? 'block' : 'none';
+            const lbl = document.getElementById('lblText');
+            
+            // Labels
+            if (type === 'title') { lbl.innerText = 'Window Title'; }
+            else if (type === 'category') { lbl.innerText = 'Category Name'; }
+            else if (type === 'text') { lbl.innerText = 'Text Content'; }
+            else if (type === 'image') { lbl.innerText = 'Image Filename (or Link)'; setDisplay('propColor', false); }
+            else if (type === 'button') { 
+                lbl.innerText = 'Button Label'; 
+                setDisplay('propCommand', true); 
+                setDisplay('propColor', false); 
+                updateCallbackInput();
+            }
+            else if (['input','slider','toggle','radio','dropdown'].includes(type)) {
+                setDisplay('propID', true);
+                setDisplay('propColor', false);
+                
+                if(type === 'input') { lbl.innerText = 'Initial Text'; setDisplay('propPlaceholder', true); }
+                else if(type === 'slider') { lbl.innerText = 'Label Text'; setDisplay('propSlider', true); }
+                else if(type === 'toggle') { lbl.innerText = 'Label Text'; setDisplay('propID', true); }
+                else if(type === 'radio') { lbl.innerText = 'Label Text'; setDisplay('propRadio', true); }
+                else if(type === 'dropdown') { lbl.innerText = 'Label Text'; setDisplay('propDropdown', true); }
+            }
+        }
 
-            // Context Labels
-            const lbl = document.querySelector('#propText label');
+        function applyTypeDefaults() {
+            if(isMapping) return;
+
+            const type = document.getElementById('elementType').value;
             const txt = document.getElementById('elText');
             const col = document.getElementById('elColor');
 
-            if(type === 'image') { lbl.innerText = 'Image Filename'; txt.value = 'image.png'; }
-            else if(type === 'title') { lbl.innerText = 'Window Title'; txt.value = 'My Window'; col.value = '#ffffff'; }
-            else if(type === 'category') { lbl.innerText = 'Category Name'; txt.value = 'Category'; col.value = '#ffd700'; }
-            else if(type === 'button') { lbl.innerText = 'Button Label'; txt.value = 'Button'; }
-            else { lbl.innerText = 'Text Content'; txt.value = 'Label'; col.value = '#e0e0e0'; }
+            if (type === 'title') { txt.value = 'My Window'; col.value = '#ffffff'; }
+            else if (type === 'category') { txt.value = 'Category'; col.value = '#ffd700'; }
+            else if (type === 'text') { txt.value = 'Label'; col.value = '#e0e0e0'; }
+            else if (type === 'image') { txt.value = 'image.png'; }
+            else if (type === 'button') { txt.value = 'Button'; }
+            else if (type === 'input') { txt.value = ''; }
             
             document.getElementById('colorHex').innerText = col.value;
+        }
+
+        function updateCallbackInput() {
+            const isCb = document.getElementById('elIsCallback').checked;
+            document.getElementById('callbackOptions').style.display = isCb ? 'block' : 'none';
+            
+            const cbType = document.getElementById('elCallbackType').value;
+            const isSound = isCb && cbType === 'playsound';
+
+            document.getElementById('soundOptions').style.display = isSound ? 'block' : 'none';
+            document.getElementById('cmdInputArea').style.display = isSound ? 'none' : 'block';
+
+            if(!isCb) {
+                document.getElementById('lblCommand').innerText = "Chat Command";
+                document.getElementById('elCommand').placeholder = ".heal {id}";
+            } else {
+                document.getElementById('lblCommand').innerText = "Method Name (e.g. MyFunc)";
+                document.getElementById('elCommand').placeholder = "MyFunction";
+            }
+        }
+
+        function onPropChange(prop, val) {
+            if (!selectedId) return;
+            const el = elements.find(e => e.uid === selectedId);
+            if (el) {
+                el[prop] = val;
+                render();
+            }
+        }
+
+        function syncSoundToLocal() {
+            if(!selectedId) return;
+            const el = elements.find(e => e.uid === selectedId);
+            if(el && el.isCallback && el.callbackType === 'playsound') {
+                const val = document.getElementById('elSoundFile').value;
+                el.soundFile = val;
+                el.attachLocal = val;
+                render();
+            }
         }
 
         function updateCanvasSize() {
@@ -607,61 +791,97 @@
         function addElement() {
             const type = document.getElementById('elementType').value;
             const text = document.getElementById('elText').value;
-            const cmd = document.getElementById('elCommand').value;
-            const col = document.getElementById('elColor').value;
-
+            const id = document.getElementById('elID').value || type + "_" + idCounter;
+            
             const el = {
-                id: 'el_' + (++idCounter),
+                uid: 'el_' + (++idCounter),
+                id: id,
                 type: type,
                 text: text,
-                command: cmd,
-                color: col,
+                tab: currentTab,
                 x: 20, y: 20,
-                w: 100, h: 30
+                w: 100, h: 30,
+                color: document.getElementById('elColor').value,
+                command: document.getElementById('elCommand').value,
+                
+                isCallback: document.getElementById('elIsCallback').checked,
+                callbackType: document.getElementById('elCallbackType').value,
+                soundFile: document.getElementById('elSoundFile').value,
+                soundVol: document.getElementById('elSoundVol').value,
+
+                placeholder: document.getElementById('elPlaceholder').value,
+                min: document.getElementById('elMin').value,
+                max: document.getElementById('elMax').value,
+                def: document.getElementById('elDef').value,
+                options: document.getElementById('elOptions').value,
+                group: document.getElementById('elGroup').value,
+                
+                attachLocal: "",
+                attachRemote: ""
             };
 
-            // Defaults
-            if(type === 'button') { el.w = 120; el.h = 30; }
-            else if(type === 'image') { el.w = 64; el.h = 64; }
-            else if(type === 'text') { el.w = 150; el.h = 20; }
-            else if(type === 'category') { el.w = 200; el.h = 25; }
-            else if(type === 'title') {
-                // Center title
+            if (type === 'button') { el.w = 120; el.h = 30; }
+            else if (type === 'image') { el.w = 64; el.h = 64; }
+            else if (type === 'text') { el.w = 150; el.h = 20; }
+            else if (type === 'category') { el.w = 200; el.h = 25; }
+            else if (type === 'input') { el.w = 150; el.h = 30; }
+            else if (type === 'slider') { el.w = 200; el.h = 30; }
+            else if (type === 'dropdown') { el.w = 150; el.h = 30; }
+            else if (type === 'title') {
                 const cw = parseInt(document.getElementById('canvasWidth').value);
-                el.w = 200; el.h = 30;
-                el.x = (cw/2) - 100; el.y = 0;
-                // Remove existing titles
+                el.w = 200; el.h = 30; el.x = (cw/2) - 100; el.y = 0; 
+                el.tab = tabs[0]; 
                 elements = elements.filter(e => e.type !== 'title');
             }
 
             elements.push(el);
             render();
-            select(el.id);
+            select(el.uid);
         }
 
         // --- RENDER ---
         function render() {
             const cvs = document.getElementById('canvas');
+            const showGhosts = document.getElementById('showGhosts').checked;
             cvs.innerHTML = '';
 
             elements.forEach(el => {
                 const div = document.createElement('div');
                 div.className = `element el-${el.type}`;
-                div.id = el.id;
+                
+                if(el.type !== 'title' && el.tab !== currentTab) {
+                    if(showGhosts) div.classList.add('ghost-tab');
+                    else div.classList.add('hidden-tab');
+                }
+
+                if(el.attachLocal || el.attachRemote) div.classList.add('has-attachment');
+
+                div.id = el.uid;
                 div.style.left = el.x + 'px';
                 div.style.top = el.y + 'px';
                 div.style.width = el.w + 'px';
                 div.style.height = el.h + 'px';
 
-                // Content
-                div.innerText = el.text;
-                if(el.color) div.style.color = el.color;
-                if(el.type === 'category') div.style.borderColor = el.color;
+                if(el.type === 'text' || el.type === 'title' || el.type === 'category') {
+                    div.innerHTML = el.text;
+                    div.style.color = el.color;
+                    if(el.type === 'category') div.style.borderColor = el.color;
+                }
+                else if(el.type === 'button') {
+                    div.innerText = el.text;
+                }
+                else if(el.type === 'image') {
+                    div.innerText = "IMG";
+                    if(el.attachRemote) div.style.backgroundImage = `url('${el.attachRemote}')`;
+                    
+                    // FIXED: Using 100% 100% to stretch properly
+                    div.style.backgroundSize = "100% 100%"; 
+                }
+                else if(el.type === 'input') div.innerText = el.placeholder || el.text;
+                else div.innerText = el.text;
 
-                // Selected State
-                if(el.id === selectedId) {
+                if(el.uid === selectedId) {
                     div.classList.add('selected');
-                    // Resize Handle (Title is fixed)
                     if(el.type !== 'title') {
                         const handle = document.createElement('div');
                         handle.className = 'resize-handle';
@@ -670,298 +890,327 @@
                     }
                 }
 
-                div.onmousedown = (e) => initDrag(e, el);
+                div.oncontextmenu = (e) => showContextMenu(e, el);
+                div.onmousedown = (e) => { if(e.button === 0) initDrag(e, el); };
                 cvs.appendChild(div);
             });
-
             renderList();
         }
 
         function renderList() {
             const lst = document.getElementById('elementsList');
             lst.innerHTML = '';
-
-            // Reverse so top of list is top z-index (visually)
             elements.slice().reverse().forEach(el => {
+                if(el.tab !== currentTab && el.type !== 'title') return;
+                
                 const item = document.createElement('div');
-                item.className = `list-item ${el.id === selectedId ? 'active' : ''}`;
-                item.onclick = () => select(el.id);
+                item.className = `list-item ${el.uid === selectedId ? 'active' : ''}`;
+                item.onclick = () => select(el.uid);
+                
+                let tagClass = "list-tag";
+                let tagText = el.type.substr(0,3).toUpperCase();
+                if(el.type === 'button' && el.isCallback) {
+                    tagClass += " csharp";
+                    tagText = "C# BTN";
+                }
+
                 item.innerHTML = `
                     <div style="display:flex; align-items:center;">
-                        <span class="list-tag">${el.type.toUpperCase().substr(0,3)}</span>
-                        <span style="color:#ddd;">${el.text.substring(0, 18)}</span>
+                        <span class="${tagClass}">${tagText}</span>
+                        <span style="color:#ddd;">${(el.text||el.id).substring(0, 18)}</span>
                     </div>
-                    <div class="list-del" onclick="remove('${el.id}')">×</div>
+                    <div style="color:#ff6b6b; font-weight:bold;" onclick="remove('${el.uid}')">×</div>
                 `;
                 lst.appendChild(item);
             });
         }
 
         // --- MANIPULATION ---
-        function select(id) {
-            selectedId = id;
-            render();
-        }
+        function select(uid) { 
+            selectedId = uid;
+            const el = elements.find(e => e.uid === uid);
+            if(el) {
+                isMapping = true; // Block defaults
+                
+                document.getElementById('elementType').value = el.type;
+                updateInputVisibility();
+                
+                document.getElementById('elText').value = el.text || "";
+                document.getElementById('elID').value = el.id || "";
+                document.getElementById('elColor').value = el.color || "#e0e0e0";
+                document.getElementById('colorHex').innerText = el.color || "#e0e0e0";
+                document.getElementById('elCommand').value = el.command || "";
+                
+                document.getElementById('elIsCallback').checked = el.isCallback || false;
+                document.getElementById('elCallbackType').value = el.callbackType || "custom";
+                document.getElementById('elSoundFile').value = el.soundFile || "";
+                document.getElementById('elSoundVol').value = el.soundVol || 1.0;
+                
+                updateCallbackInput(); 
 
-        function remove(id) {
-            elements = elements.filter(e => e.id !== id);
-            if(selectedId === id) selectedId = null;
-            render();
-        }
+                document.getElementById('elPlaceholder').value = el.placeholder || "";
+                document.getElementById('elMin').value = el.min || 0;
+                document.getElementById('elMax').value = el.max || 100;
+                document.getElementById('elDef').value = el.def || 50;
+                document.getElementById('elOptions').value = el.options || "";
+                document.getElementById('elGroup').value = el.group || "";
 
-        function clearCanvas() {
-            if(confirm("Clear everything?")) {
-                elements = [];
-                selectedId = null;
+                isMapping = false;
                 render();
             }
         }
 
-        // --- MOUSE INPUT ---
-        function initDrag(e, el) {
-            if(e.target.className === 'resize-handle') return;
-            if(el.type === 'title') return; // Lock title
+        function deselectElement() {
+            selectedId = null;
+            isMapping = false;
+            applyTypeDefaults();
+            render();
+        }
+
+        function remove(uid) { elements = elements.filter(e => e.uid !== uid); if(selectedId===uid) deselectElement(); render(); }
+        function removeSelected() { if(ctxTargetId) remove(ctxTargetId); hideContextMenu(); }
+        function clearCanvas() { if(confirm("Clear all elements?")) { elements=[]; idCounter=0; deselectElement(); } }
+
+        // --- CONTEXT MENU ---
+        document.oncontextmenu = (e) => e.preventDefault();
+        function showContextMenu(e, el) { 
+            e.preventDefault(); e.stopPropagation(); select(el.uid); ctxTargetId=el.uid; 
             
-            e.stopPropagation();
-            select(el.id);
-            dragTarget = el;
-            isResizing = false;
-            dragStart = { x: e.clientX - el.x, y: e.clientY - el.y };
+            const menu=document.getElementById('ctxMenu'); 
+            const editCbBtn = document.getElementById('ctxEditCallback');
+            if(el.type === 'button' && el.isCallback) editCbBtn.style.display = 'block';
+            else editCbBtn.style.display = 'none';
+
+            menu.style.display='flex'; menu.style.left=e.pageX+'px'; menu.style.top=e.pageY+'px'; 
+        }
+        function hideContextMenu() { document.getElementById('ctxMenu').style.display='none'; }
+        
+        function focusCallbackSettings() {
+            hideContextMenu();
+            const el = elements.find(e => e.uid === ctxTargetId);
+            if(!el) return;
+            document.querySelector('.scroll-area').scrollTop = 0;
+            const cmdSection = document.getElementById('propCommand');
+            cmdSection.style.borderColor = 'var(--code-color)';
+            cmdSection.style.borderWidth = '1px';
+            cmdSection.style.borderStyle = 'solid';
+            setTimeout(() => { cmdSection.style.border = 'none'; }, 1000);
         }
 
-        function initResize(e, el) {
-            e.stopPropagation();
-            dragTarget = el;
-            isResizing = true;
-            dragStart = { x: e.clientX, y: e.clientY };
+        function openAttachModal() {
+            hideContextMenu();
+            const el = elements.find(e => e.uid === ctxTargetId);
+            if(!el) return;
+            document.getElementById('attachLocal').value = el.attachLocal || "";
+            document.getElementById('attachRemote').value = el.attachRemote || "";
+            document.getElementById('groupRemote').style.display = el.attachRemote ? 'block' : 'none';
+            document.getElementById('attachModal').style.display = 'flex';
         }
 
+        function saveAttachment() {
+            const loc = document.getElementById('attachLocal').value;
+            const rem = document.getElementById('attachRemote').value;
+            const el = elements.find(e => e.uid === ctxTargetId);
+            if(el) {
+                el.attachLocal = loc; el.attachRemote = rem;
+                
+                // Smart Server Audio Command
+                if(rem && rem.match(/\.(mp3|wav|ogg)$/i) && el.type === 'button') {
+                    const parts = rem.split('/');
+                    let id = parts[parts.length-1].split('?')[0].replace(/[^a-zA-Z0-9._-]/g, '');
+                    el.command = "zui_play " + id;
+                    if(selectedId === el.uid) document.getElementById('elCommand').value = el.command;
+                }
+
+                if(el.type === 'image' && (el.text === 'image.png' || el.text === '')) {
+                    if(loc) el.text = loc;
+                    else if(rem) { const parts = rem.split('/'); el.text = parts[parts.length-1].split('?')[0]; }
+                }
+            }
+            document.getElementById('attachModal').style.display = 'none';
+            render();
+        }
+        function clearAttachment() { const el=elements.find(e=>e.uid===ctxTargetId); if(el){el.attachLocal=""; el.attachRemote="";} document.getElementById('attachModal').style.display='none'; render(); }
+
+        // --- MOUSE INPUT ---
+        function initDrag(e, el) { if(e.target.className==='resize-handle')return; if(el.type==='title')return; e.stopPropagation(); select(el.uid); dragTarget=el; isResizing=false; dragStart={x:e.clientX-el.x, y:e.clientY-el.y}; }
+        function initResize(e, el) { e.stopPropagation(); dragTarget=el; isResizing=true; dragStart={x:0, y:0}; }
         document.addEventListener('mousemove', (e) => {
             if(!dragTarget) return;
-
-            const grid = document.getElementById('snapToGrid').checked ? 10 : 1;
-
+            const grid=10; const cvsRect=document.getElementById('canvas').getBoundingClientRect();
             if(isResizing) {
-                // Calculate new dimensions
-                const cvs = document.getElementById('canvas').getBoundingClientRect();
-                const elDiv = document.getElementById(dragTarget.id).getBoundingClientRect();
-                
-                // Simple delta approach often jitters, calculating from mouse relative to element Top/Left is cleaner
-                // But since element top/left moves if we don't account for offset...
-                // Simpler: Just track mouse position relative to element start X/Y
-                
-                // Current Mouse relative to Canvas
-                const mx = e.clientX - cvs.left;
-                const my = e.clientY - cvs.top;
-                
-                let nw = mx - dragTarget.x;
-                let nh = my - dragTarget.y;
-
-                // Snap
-                nw = Math.round(nw / grid) * grid;
-                nh = Math.round(nh / grid) * grid;
-
-                if(nw < 10) nw = 10;
-                if(nh < 10) nh = 10;
-
-                dragTarget.w = nw;
-                dragTarget.h = nh;
-                
+                let w = e.clientX - cvsRect.left - dragTarget.x;
+                let h = e.clientY - cvsRect.top - dragTarget.y;
+                w = Math.round(w/grid)*grid; h = Math.round(h/grid)*grid;
+                if(w<20)w=20; if(h<20)h=20; dragTarget.w=w; dragTarget.h=h;
             } else {
-                // Dragging
-                let nx = e.clientX - dragStart.x;
-                let ny = e.clientY - dragStart.y;
-
-                // Snap
-                nx = Math.round(nx / grid) * grid;
-                ny = Math.round(ny / grid) * grid;
-
-                dragTarget.x = nx;
-                dragTarget.y = ny;
+                let x = e.clientX - dragStart.x;
+                let y = e.clientY - dragStart.y;
+                x = Math.round(x/grid)*grid; y = Math.round(y/grid)*grid;
+                dragTarget.x=x; dragTarget.y=y;
             }
             render();
         });
-
-        document.addEventListener('mouseup', () => {
-            dragTarget = null;
-        });
-
+        document.addEventListener('mouseup', () => { dragTarget=null; });
 
         // --- LOAD / SAVE ---
-        
         function saveLayout() {
-            const data = {
-                w: document.getElementById('canvasWidth').value,
-                h: document.getElementById('canvasHeight').value,
-                elements: elements
-            };
-            const blob = new Blob([JSON.stringify(data, null, 2)], {type : 'application/json'});
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = 'layout.json';
-            a.click();
+            const data = { w: document.getElementById('canvasWidth').value, h: document.getElementById('canvasHeight').value, tabs: tabs, elements: elements };
+            const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+            const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='zui_layout.json'; a.click();
         }
-
         function loadFile(e) {
-            const f = e.target.files[0];
-            if(!f) return;
+            const f = e.target.files[0]; if(!f) return;
             const r = new FileReader();
             r.onload = (ev) => {
                 try {
                     const d = JSON.parse(ev.target.result);
-                    
-                    // Canvas Size
-                    if(d.canvasWidth) d.w = d.canvasWidth; // Backwards Compat
-                    if(d.canvasHeight) d.h = d.canvasHeight;
-                    
-                    document.getElementById('canvasWidth').value = d.w;
-                    document.getElementById('canvasHeight').value = d.h;
+                    document.getElementById('canvasWidth').value = d.w || 500;
+                    document.getElementById('canvasHeight').value = d.h || 400;
                     updateCanvasSize();
-
-                    // Elements Normalization
-                    elements = d.elements.map((el, i) => {
-                        // Backwards Compat Logic
-                        // Old JSON: id, type, x, y, width, height
-                        // New: id, type, x, y, w, h
-                        
-                        let txt = el.text;
-                        if(!txt && el.content) txt = el.content; // Old 'text' type used 'content'
-                        if(!txt && el.filename) txt = el.filename; // Old 'image' type used 'filename'
-
-                        return {
-                            id: 'el_' + i, // Re-index to be safe
-                            type: el.type,
-                            text: txt || "Unknown",
-                            command: el.command || "",
-                            color: el.color || "#ffffff",
-                            x: el.x || 0,
-                            y: el.y || 0,
-                            w: el.width || el.w || 100,
-                            h: el.height || el.h || 30
-                        };
+                    if(d.tabs && d.tabs.length>0) tabs=d.tabs; else { const dist=[...new Set((d.elements||[]).map(e=>e.tab).filter(t=>t))]; tabs=dist.length>0?dist:["Main"]; }
+                    currentTab = tabs[0]; updateTabs();
+                    elements = (d.elements || []).map((el, i) => {
+                        el.uid = 'el_'+i; if(!el.tab) el.tab=tabs[0]; if(!el.w) el.w=100; if(!el.h) el.h=30;
+                        if(el.url && !el.attachRemote) el.attachRemote = el.url;
+                        if(!el.attachLocal) el.attachLocal = ""; if(!el.attachRemote) el.attachRemote = "";
+                        if(!el.soundFile) el.soundFile = ""; if(!el.soundVol) el.soundVol = 1.0;
+                        if(!el.callbackType) el.callbackType = "custom";
+                        return el;
                     });
-
-                    idCounter = elements.length;
-                    render();
-                    alert("Loaded successfully.");
-                } catch(err) {
-                    alert("Error parsing JSON: " + err);
-                }
+                    idCounter = elements.length; deselectElement(); 
+                } catch(err){ alert("Error:"+err); }
             };
-            r.readAsText(f);
-            e.target.value = '';
+            r.readAsText(f); e.target.value='';
         }
 
-
-        // --- CODE GENERATION ---
-
-        function setGenMode(m) {
-            genMode = m;
-            document.querySelectorAll('.toggle-opt').forEach(d => d.classList.remove('active'));
-            document.getElementById(m === 'client' ? 'modeClient' : 'modeServer').classList.add('active');
-            generateCode();
-        }
-
-        function showCodeModal() {
-            generateCode();
-            document.getElementById('codeModal').style.display = 'flex';
-        }
-
-        function copyCode() {
-            const t = document.getElementById('codeOutput');
-            t.select(); document.execCommand('copy');
-            alert("Code Copied!");
-        }
+        // --- CODE GEN ---
+        function setGenMode(m) { genMode=m; document.querySelectorAll('.toggle-opt').forEach(d=>d.classList.remove('active')); document.getElementById(m==='client'?'modeClient':'modeServer').classList.add('active'); generateCode(); }
+        function showCodeModal() { generateCode(); document.getElementById('codeModal').style.display='flex'; }
+        function copyCode() { document.getElementById('codeOutput').select(); document.execCommand('copy'); alert("Code Copied!"); }
 
         function generateCode() {
             const w = document.getElementById('canvasWidth').value;
             const h = document.getElementById('canvasHeight').value;
-            let code = "";
+            let c = "";
+            const clr = (t,col) => (col&&col!=='#e0e0e0'&&col!=='#ffffff') ? `<color=${col}>${t}</color>` : t;
+            const esc = (t) => (t||"").replace(/"/g, '\\"');
 
-            if(genMode === 'client') {
-                code += `// --- CLIENT SIDE (Reflection) ---\n`;
-                code += `// Copy this into your Plugin.cs\n\n`;
-                code += `private void CreateUI()\n{\n`;
-                code += `    Call("SetPlugin", "MyPlugin");\n`;
-                code += `    Call("SetTargetWindow", "MyWindow");\n`;
-                code += `    Call("SetUI", ${w}, ${h});\n`;
-                
-                if(!elements.find(e => e.type === 'title')) code += `    Call("HideTitleBar");\n`;
-                code += `\n`;
-
-                elements.forEach(el => {
-                    const safeTxt = (el.text || "").replace(/"/g, '\\"');
-                    const c = el.color;
-
-                    if(el.type === 'title') {
-                        code += `    Call("SetTitle", "${wrapColor(safeTxt, c)}");\n`;
-                    } else if(el.type === 'text') {
-                        code += `    Call("AddText", "${wrapColor(safeTxt, c)}", ${el.x}f, ${el.y}f);\n`;
-                    } else if(el.type === 'category') {
-                        code += `    Call("AddCategory", "${wrapColor(safeTxt, c)}", ${el.x}f, ${el.y}f);\n`;
-                    } else if(el.type === 'image') {
-                        code += `    Call("AddImage", "${safeTxt}", ${el.x}f, ${el.y}f, ${el.w}f, ${el.h}f);\n`;
-                    } else if(el.type === 'button') {
-                        // Check if resized from default (120x30)
-                        if(el.w != 120 || el.h != 30) {
-                             code += `    // Custom Sized Button\n`;
-                             code += `    Call("AddButton", "${safeTxt}", "${el.command}", ${el.x}f, ${el.y}f, ${el.w}f, ${el.h}f);\n`;
-                        } else {
-                             code += `    Call("AddButton", "${safeTxt}", "${el.command}", ${el.x}f, ${el.y}f);\n`;
-                        }
+            const assetMap = {};
+            elements.forEach(el => {
+                if(el.attachRemote && el.attachRemote.startsWith('http')) {
+                    if(!assetMap[el.attachRemote]) {
+                        const parts = el.attachRemote.split('/');
+                        let name = parts[parts.length-1].split('?')[0].replace(/[^a-zA-Z0-9._-]/g, '');
+                        if(name.length<3) name="asset_"+Math.floor(Math.random()*1000);
+                        assetMap[el.attachRemote] = name;
                     }
+                }
+            });
+
+            let warnings = [];
+            elements.forEach(el => {
+                if(genMode === 'client' && el.attachRemote && !el.attachLocal) warnings.push(`Element '${el.text}' has a Server URL but no Local Filename.`);
+                if(genMode === 'client' && el.isCallback && el.callbackType === 'playsound' && !el.soundFile) warnings.push(`Button '${el.text}' is set to PlaySound but has no Audio Filename.`);
+                
+                if(genMode === 'server' && el.attachRemote && el.attachRemote.match(/\.(mp3|wav|ogg)$/i) && el.type === 'button') {
+                     const expectedID = assetMap[el.attachRemote];
+                     if(expectedID && !el.command.includes(expectedID)) {
+                         warnings.push(`Button '${el.text}' has audio attached but command does not play it (Expected 'zui_play ${expectedID}').`);
+                     }
+                }
+            });
+
+            const warnBox = document.getElementById('codeWarning');
+            if(warnings.length > 0) {
+                warnBox.style.display = 'block';
+                warnBox.innerHTML = "<b>WARNINGS:</b><br>" + warnings.join('<br>');
+            } else { warnBox.style.display = 'none'; }
+
+            if (genMode === 'client') {
+                c += `// --- CLIENT SIDE (Reflection) ---\n`;
+                c += `// Requires ZUI 2.2+\n\n`;
+                c += `private void CreateUI()\n{\n`;
+                c += `    Call("SetPlugin", "MyPlugin");\n`;
+                c += `    Call("SetTargetWindow", "MyWindow");\n`;
+                c += `    Call("SetUI", ${w}, ${h});\n`;
+                
+                const titleEl = elements.find(e => e.type === 'title');
+                if(titleEl) c += `    Call("SetTitle", "${clr(esc(titleEl.text), titleEl.color)}");\n`;
+                else c += `    Call("HideTitleBar");\n`;
+
+                c += `\n    // 2. Content\n`;
+                const singleMain = (tabs.length===1 && tabs[0]==="Main");
+                tabs.forEach(tab => {
+                    if(!singleMain) c += `\n    Call("CreateTab", "${tab}", "${tab} Tab");\n`;
+
+                    elements.filter(e => e.tab === tab && e.type !== 'title').forEach(el => {
+                        const txt = clr(esc(el.text), el.color);
+                        let assetName = el.text; 
+                        if(el.attachLocal) assetName = el.attachLocal;
+
+                        switch(el.type) {
+                            case 'text': c += `    Call("AddText", "${txt}", ${el.x}f, ${el.y}f);\n`; break;
+                            case 'category': c += `    Call("AddCategory", "${txt}", ${el.x}f, ${el.y}f);\n`; break;
+                            case 'image': c += `    Call("AddImage", "${assetName}", ${el.x}f, ${el.y}f, ${el.w}f, ${el.h}f);\n`; break;
+                            case 'button': 
+                                if(el.isCallback) {
+                                    if(el.callbackType === 'playsound') {
+                                        c += `    Call("AddButtonWithCallback", "${txt}", (Action)(() => { Call("PlaySound", "${el.soundFile}", ${el.soundVol}f); }), ${el.x}f, ${el.y}f, ${el.w}f, ${el.h}f);\n`;
+                                    } else {
+                                        c += `    Call("AddButtonWithCallback", "${txt}", (Action)${el.command}, ${el.x}f, ${el.y}f, ${el.w}f, ${el.h}f);\n`;
+                                    }
+                                } else {
+                                    c += `    Call("AddButton", "${txt}", "${el.command}", ${el.x}f, ${el.y}f, ${el.w}f, ${el.h}f);\n`;
+                                }
+                                break;
+                            case 'input': c += `    Call("AddInput", "${el.id}", "${esc(el.placeholder)}", ${el.x}f, ${el.y}f, ${el.w}f);\n`; break;
+                            case 'toggle': c += `    Call("AddToggle", "${el.id}", "${txt}", true, ${el.x}f, ${el.y}f);\n`; break;
+                            case 'radio': c += `    Call("AddRadio", "${el.id}", "${el.group}", "${txt}", false, ${el.x}f, ${el.y}f);\n`; break;
+                            case 'slider': c += `    Call("AddSlider", "${el.id}", ${el.min}f, ${el.max}f, ${el.def}f, ${el.x}f, ${el.y}f, ${el.w}f);\n`; break;
+                            case 'dropdown': c += `    Call("AddDropdown", "${el.id}", new List<string>{ "${el.options.replace(/,/g, '","')}" }, 0, ${el.x}f, ${el.y}f, ${el.w}f);\n`; break;
+                        }
+                    });
                 });
-                code += `}\n`;
+                c += `}\n`;
             } else {
-                code += `// --- SERVER SIDE (Packets) ---\n`;
-                code += `// Copy this into your server command handler\n`;
-                code += `using System.Collections.Generic;\n`;
-                code += `using System.Text.Json;\n\n`;
-                code += `private void SendUI()\n{\n`;
-                code += `    // 1. Setup\n`;
-                code += `    SendPacket("SetPlugin", new Dictionary<string, string> { {"Plugin", "MyPlugin"} });\n`;
-                code += `    SendPacket("SetTargetWindow", new Dictionary<string, string> { {"Window", "MyWindow"} });\n`;
-                code += `    SendPacket("SetUICustom", new Dictionary<string, string> { {"W", "${w}"}, {"H", "${h}"} });\n`;
+                c += `// --- SERVER SIDE (Packets) ---\n`;
+                c += `private void SendUI()\n{\n`;
+                c += `    SendPacket("SetPlugin", new() {{"Plugin", "MyPlugin"}});\n`;
+                c += `    SendPacket("SetTargetWindow", new() {{"Window", "MyWindow"}});\n`;
+                c += `    SendPacket("SetUICustom", new() {{"W", "${w}"}, {"H", "${h}"}});\n`;
                 
-                if(!elements.find(e => e.type === 'title')) code += `    SendPacket("HideTitleBar", new Dictionary<string, string>());\n`;
+                const titleEl = elements.find(e => e.type === 'title');
+                if(titleEl) c += `    SendPacket("SetTitle", new() {{"Text", "${clr(esc(titleEl.text), titleEl.color)}"}});\n`;
 
-                code += `\n    // 2. Elements\n`;
-
-                elements.forEach(el => {
-                    const safeTxt = (el.text || "").replace(/"/g, '\\"');
-                    const c = el.color;
-
-                    if(el.type === 'title') {
-                        code += `    SendPacket("SetTitle", new Dictionary<string, string> { {"Text", "${wrapColor(safeTxt, c)}"} });\n`;
-                    } else if(el.type === 'text') {
-                        code += `    SendPacket("AddText", new Dictionary<string, string> {\n`;
-                        code += `        {"Text", "${wrapColor(safeTxt, c)}"}, {"X", "${el.x}"}, {"Y", "${el.y}"}\n    });\n`;
-                    } else if(el.type === 'image') {
-                        code += `    SendPacket("AddImage", new Dictionary<string, string> {\n`;
-                        code += `        {"Img", "${safeTxt}"}, {"X", "${el.x}"}, {"Y", "${el.y}"}, {"W", "${el.w}"}, {"H", "${el.h}"}\n    });\n`;
-                    } else if(el.type === 'button') {
-                        code += `    SendPacket("AddButton", new Dictionary<string, string> {\n`;
-                        code += `        {"Text", "${safeTxt}"}, {"Cmd", "${el.command}"}, {"X", "${el.x}"}, {"Y", "${el.y}"}`;
-                        if(el.w != 120 || el.h != 30) {
-                            code += `, {"W", "${el.w}"}, {"H", "${el.h}"}, {"Img", ""}`; // Force custom size with default img
-                        }
-                        code += `\n    });\n`;
-                    }
+                Object.keys(assetMap).forEach(url => {
+                    const name = assetMap[url];
+                    if(url.match(/\.(png|jpg|jpeg|gif)$/i)) c += `    SendPacket("RegisterImage", new() {{"Name", "${name}"}, {"Url", "${url}"}});\n`;
+                    else c += `    SendPacket("RegisterSound", new() {{"Name", "${name}"}, {"Url", "${url}"}});\n`;
                 });
 
-                code += `\n    // 3. Open\n`;
-                code += `    SendPacket("Open", new Dictionary<string, string>());\n`;
-                code += `}\n`;
+                const singleMain = (tabs.length === 1 && tabs[0] === "Main");
+                tabs.forEach(tab => {
+                    if(!singleMain) c += `    SendPacket("CreateTab", new() {{"Name", "${tab}"}});\n`;
+                    elements.filter(e => e.tab === tab && e.type !== 'title').forEach(el => {
+                        const txt = clr(esc(el.text), el.color);
+                        let assetName = el.text;
+                        if(el.attachRemote && assetMap[el.attachRemote]) assetName = assetMap[el.attachRemote];
+                        else if(el.attachLocal) assetName = el.attachLocal;
+
+                        if(el.type === 'text') c += `    SendPacket("AddText", new() {{"Text", "${txt}"}, {"X", "${el.x}"}, {"Y", "${el.y}"}});\n`;
+                        else if(el.type === 'image') c += `    SendPacket("AddImage", new() {{"Img", "${assetName}"}, {"X", "${el.x}"}, {"Y", "${el.y}"}, {"W", "${el.w}"}, {"H", "${el.h}"}});\n`;
+                        else if(el.type === 'button') c += `    SendPacket("AddButton", new() {{"Text", "${txt}"}, {"Cmd", "${el.command}"}, {"X", "${el.x}"}, {"Y", "${el.y}"}, {"W", "${el.w}"}, {"H", "${el.h}"}, {"Img", ""}});\n`;
+                        else if(el.type === 'input') c += `    SendPacket("AddInput", new() {{"Id", "${el.id}"}, {"Text", "${esc(el.placeholder)}"}, {"X", "${el.x}"}, {"Y", "${el.y}"}, {"W", "${el.w}"}});\n`;
+                        else if(el.type === 'slider') c += `    SendPacket("AddSlider", new() {{"Id", "${el.id}"}, {"Min", "${el.min}"}, {"Max", "${el.max}"}, {"Default", "${el.def}"}, {"X", "${el.x}"}, {"Y", "${el.y}"}, {"W", "${el.w}"}});\n`;
+                        else if(el.type === 'toggle') c += `    SendPacket("AddToggle", new() {{"Id", "${el.id}"}, {"Text", "${txt}"}, {"Default", "true"}, {"X", "${el.x}"}, {"Y", "${el.y}"}});\n`;
+                        else if(el.type === 'dropdown') c += `    SendPacket("AddDropdown", new() {{"Id", "${el.id}"}, {"Options", "${el.options.replace(/,/g, '|')}"}, {"Default", "0"}, {"X", "${el.x}"}, {"Y", "${el.y}"}, {"W", "${el.w}"}});\n`;
+                    });
+                });
+                c += `    SendPacket("Open", new Dictionary<string,string>());\n}\n`;
             }
-
-            document.getElementById('codeOutput').value = code;
+            document.getElementById('codeOutput').value = c;
         }
-
-        function wrapColor(txt, col) {
-            if(!col || col === '#e0e0e0' || col === '#ffffff') return txt;
-            return `<color=${col}>${txt}</color>`;
-        }
-
     </script>
 </body>
 </html>

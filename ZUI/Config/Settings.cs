@@ -17,6 +17,11 @@ namespace ZUI.Config
         public static bool ClearServerMessages =>
             (ConfigEntries[nameof(ClearServerMessages)] as ConfigEntry<bool>)?.Value ?? false;
 
+        // --- NEW SECURITY FLAG ---
+        public static bool AllowServerAudioDownloads =>
+            (ConfigEntries[nameof(AllowServerAudioDownloads)] as ConfigEntry<bool>)?.Value ?? false;
+        // -------------------------
+
         public static int FamStatsQueryIntervalInSeconds
         {
             get
@@ -59,9 +64,9 @@ namespace ZUI.Config
         }
 
         public static bool IsFamStatsPanelEnabled => (ConfigEntries[nameof(IsFamStatsPanelEnabled)] as ConfigEntry<bool>)?.Value ?? true;
-        public static bool IsBoxPanelEnabled      => (ConfigEntries[nameof(IsBoxPanelEnabled)] as ConfigEntry<bool>)?.Value ?? true;
-        public static bool IsBindButtonEnabled    => (ConfigEntries[nameof(IsBindButtonEnabled)] as ConfigEntry<bool>)?.Value ?? true;
-        public static bool IsCombatButtonEnabled  => (ConfigEntries[nameof(IsCombatButtonEnabled)] as ConfigEntry<bool>)?.Value ?? true;
+        public static bool IsBoxPanelEnabled => (ConfigEntries[nameof(IsBoxPanelEnabled)] as ConfigEntry<bool>)?.Value ?? true;
+        public static bool IsBindButtonEnabled => (ConfigEntries[nameof(IsBindButtonEnabled)] as ConfigEntry<bool>)?.Value ?? true;
+        public static bool IsCombatButtonEnabled => (ConfigEntries[nameof(IsCombatButtonEnabled)] as ConfigEntry<bool>)?.Value ?? true;
         public static bool AutoEnableFamiliarEquipment => (ConfigEntries[nameof(AutoEnableFamiliarEquipment)] as ConfigEntry<bool>)?.Value ?? true;
         public static bool IsPrestigeButtonEnabled => (ConfigEntries[nameof(IsPrestigeButtonEnabled)] as ConfigEntry<bool>)?.Value ?? true;
         public static bool IsToggleButtonEnabled => (ConfigEntries[nameof(IsToggleButtonEnabled)] as ConfigEntry<bool>)?.Value ?? true;
@@ -88,11 +93,17 @@ namespace ZUI.Config
 
             InitConfigEntry(GENERAL_SETTINGS_GROUP, nameof(ClearServerMessages), true,
                 "Clear server and command messages from chat");
+
+            // --- NEW CONFIG ENTRY ---
+            InitConfigEntry(GENERAL_SETTINGS_GROUP, nameof(AllowServerAudioDownloads), false,
+                "Allow server to initiate audio file downloads. DISABLED by default for security. Only enable if you trust the server.");
+            // ------------------------
+
             InitConfigEntry(GENERAL_SETTINGS_GROUP, nameof(FamStatsQueryIntervalInSeconds), 10,
                 "Query interval for familiar stats update (no less than 10 sec)");
             InitConfigEntry(GENERAL_SETTINGS_GROUP, nameof(CommandDelayInMilliseconds), 50,
                 "Delay in milliseconds between command executions. 0 = instant (may spam), 50 = near-instant (recommended), 2000 = old behavior. Max: 5000ms");
-            
+
             // Server mod availability settings
             InitConfigEntry(GENERAL_SETTINGS_GROUP, nameof(ServerHasBloodCraft), false,
                 "Set to false if your server doesn't have BloodCraft (disables Familiar, Levels, Class, Quests features)");
@@ -102,7 +113,7 @@ namespace ZUI.Config
                 "Set to false if your server doesn't have KinPonds (disables Pond commands)");
             InitConfigEntry(GENERAL_SETTINGS_GROUP, nameof(ServerHasScarletSigns), true,
                 "Set to false if your server doesn't have ScarletSigns (disables Sign creation)");
-            
+
             InitConfigEntry(UI_SETTINGS_GROUP, nameof(UseHorizontalContentLayout), true,
                 "Use horizontal or vertical layout for main content panel");
             InitConfigEntry(FAM_SETTINGS_GROUP, nameof(LastBindCommand), "", "Last bind fam command stored");

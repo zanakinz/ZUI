@@ -444,7 +444,23 @@ namespace ZUI.API
 
             return LegacyAddButtonWithCallback(buttonText, onClick, tooltip);
         }
+        public static bool AddButtonWithCallback(string buttonText, Action onClick, float x, float y)
+        {
+            // Queue support if UI isn't ready
+            if (CheckQueue(() => AddButtonWithCallback(buttonText, onClick, x, y))) return true;
 
+            var panel = GetCurrentContextPanel();
+            if (panel != null)
+            {
+                string id = $"btn_{buttonText}";
+                // Pass the coordinates to the custom panel
+                panel.AddButtonWithCallback(id, buttonText, onClick, x, y);
+                return true;
+            }
+
+            // Fallback for legacy (ignores coords)
+            return LegacyAddButtonWithCallback(buttonText, onClick, "");
+        }
         public static bool RemoveButton(string buttonText)
         {
             var panel = GetCurrentContextPanel();

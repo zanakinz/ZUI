@@ -213,7 +213,10 @@ namespace ZUI.API
         {
             return ModRegistry.AddButtonWithCallback(buttonText, onClick, tooltip);
         }
-
+        public static bool AddButtonWithCallback(string buttonText, Action onClick, float x, float y)
+        {
+            return ModRegistry.AddButtonWithCallback(buttonText, onClick, x, y);
+        }
         public static bool RemoveButton(string buttonText)
         {
             return ModRegistry.RemoveButton(buttonText);

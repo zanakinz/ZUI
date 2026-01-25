@@ -1153,17 +1153,17 @@
                             case 'text': c += `    Call("AddText", "${txt}", ${el.x}f, ${el.y}f);\n`; break;
                             case 'category': c += `    Call("AddCategory", "${txt}", ${el.x}f, ${el.y}f);\n`; break;
                             case 'image': c += `    Call("AddImage", "${assetName}", ${el.x}f, ${el.y}f, ${el.w}f, ${el.h}f);\n`; break;
-                            case 'button': 
-                                if(el.isCallback) {
-                                    if(el.callbackType === 'playsound') {
-                                        c += `    Call("AddButtonWithCallback", "${txt}", (Action)(() => { Call("PlaySound", "${el.soundFile}", ${el.soundVol}f); }), ${el.x}f, ${el.y}f, ${el.w}f, ${el.h}f);\n`;
-                                    } else {
-                                        c += `    Call("AddButtonWithCallback", "${txt}", (Action)${el.command}, ${el.x}f, ${el.y}f, ${el.w}f, ${el.h}f);\n`;
-                                    }
-                                } else {
-                                    c += `    Call("AddButton", "${txt}", "${el.command}", ${el.x}f, ${el.y}f, ${el.w}f, ${el.h}f);\n`;
-                                }
-                                break;
+							case 'button': 
+								if(el.isCallback) {
+									if(el.callbackType === 'playsound') {
+										c += `    Call("AddButtonWithCallback", "${txt}", (Action)(() => { Call("PlaySound", "${el.soundFile}", ${el.soundVol}f); }), ${el.x}f, ${el.y}f);\n`;
+									} else {
+										c += `    Call("AddButtonWithCallback", "${txt}", (Action)${el.command}, ${el.x}f, ${el.y}f);\n`;
+									}
+								} else {
+									c += `    Call("AddButton", "${txt}", "${el.command}", ${el.x}f, ${el.y}f, ${el.w}f, ${el.h}f);\n`;
+								}
+								break;
                             case 'input': c += `    Call("AddInput", "${el.id}", "${esc(el.placeholder)}", ${el.x}f, ${el.y}f, ${el.w}f);\n`; break;
                             case 'toggle': c += `    Call("AddToggle", "${el.id}", "${txt}", true, ${el.x}f, ${el.y}f);\n`; break;
                             case 'radio': c += `    Call("AddRadio", "${el.id}", "${el.group}", "${txt}", false, ${el.x}f, ${el.y}f);\n`; break;

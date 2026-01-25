@@ -115,7 +115,7 @@ namespace ZUI.UI.ModContent
                 pinButton.Text.text = " ";
             }
             // ZUI Version Label
-            var text = UIFactory.CreateLabel(_uiAnchor, "UIAnchorText", $"ZUI 2.0.0");
+            var text = UIFactory.CreateLabel(_uiAnchor, "UIAnchorText", $"ZUI 2.2.0");
             UIFactory.SetLayoutElement(text.GameObject, 80, 25, 1, 1);
 
             // We use margin to push the text visual up without breaking the horizontal layout container

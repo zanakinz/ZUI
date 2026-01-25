@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using ZUI.UI.ModContent;
+using ZUI.Services;
 
 namespace ZUI.API
 {
@@ -158,6 +159,22 @@ namespace ZUI.API
             }
         }
 
+        // ==============================================================================================
+        // AUDIO METHODS
+        // ==============================================================================================
+
+        public static void RegisterAudio(string name, string url)
+        {
+            if (CheckQueue(() => RegisterAudio(name, url))) return;
+            AudioLoader.Download(name, url);
+        }
+
+        public static void PlaySound(string name, float volume = 1.0f)
+        {
+            if (CheckQueue(() => PlaySound(name, volume))) return;
+            AudioManager.Play(name, volume);
+        }
+
         private static bool CheckQueue(Action action)
         {
             if (_currentPlugin == null)
@@ -245,9 +262,6 @@ namespace ZUI.API
                 }
                 else
                 {
-                    // --- FIX: Prevent Duplicate Elements/Tabs ---
-                    // If the window already exists, we reset it before processing new packets.
-                    // This clears out the old content so we don't just keep adding tabs every time the button is pressed.
                     pluginPanels[windowId].Reset();
                 }
             }
@@ -298,6 +312,65 @@ namespace ZUI.API
                 panel.AddText(id, text, x, y);
             }
         }
+
+        // --- NEW DATA FIELD METHODS ---
+
+        public static void AddInputField(string id, string placeholder, float x, float y, float w)
+        {
+            if (CheckQueue(() => AddInputField(id, placeholder, x, y, w))) return;
+
+            var panel = GetCurrentContextPanel();
+            if (panel != null)
+            {
+                panel.AddInputField(id, placeholder, x, y, w);
+            }
+        }
+
+        public static void AddToggle(string id, string label, bool defaultValue, float x, float y)
+        {
+            if (CheckQueue(() => AddToggle(id, label, defaultValue, x, y))) return;
+
+            var panel = GetCurrentContextPanel();
+            if (panel != null)
+            {
+                panel.AddToggle(id, label, defaultValue, x, y);
+            }
+        }
+
+        public static void AddRadioButton(string id, string group, string label, bool defaultValue, float x, float y)
+        {
+            if (CheckQueue(() => AddRadioButton(id, group, label, defaultValue, x, y))) return;
+
+            var panel = GetCurrentContextPanel();
+            if (panel != null)
+            {
+                panel.AddRadioButton(id, group, label, defaultValue, x, y);
+            }
+        }
+
+        public static void AddSlider(string id, float min, float max, float defaultValue, float x, float y, float w)
+        {
+            if (CheckQueue(() => AddSlider(id, min, max, defaultValue, x, y, w))) return;
+
+            var panel = GetCurrentContextPanel();
+            if (panel != null)
+            {
+                panel.AddSlider(id, min, max, defaultValue, x, y, w);
+            }
+        }
+
+        public static void AddDropdown(string id, List<string> options, int defaultIndex, float x, float y, float w)
+        {
+            if (CheckQueue(() => AddDropdown(id, options, defaultIndex, x, y, w))) return;
+
+            var panel = GetCurrentContextPanel();
+            if (panel != null)
+            {
+                panel.AddDropdown(id, options, defaultIndex, x, y, w);
+            }
+        }
+
+        // ------------------------------
 
         public static void AddImage(Assembly assembly, string imageName, float x, float y, float w, float h)
         {
@@ -389,10 +462,6 @@ namespace ZUI.API
         // REFRESH & NOTIFICATION
         // ==============================================================================================
 
-        /// <summary>
-        /// Triggers a refresh across all registered UI panels.
-        /// Primarily used by ImageDownloader when a background download completes.
-        /// </summary>
         public static void NotifyChanges()
         {
             OnButtonsChanged?.Invoke();
@@ -408,11 +477,9 @@ namespace ZUI.API
 
             lock (Lock)
             {
-                // Remove Legacy
                 removedLegacy = RegisteredPlugins.RemoveAll(p =>
                     p.PluginName.Equals(pluginName, StringComparison.OrdinalIgnoreCase)) > 0;
 
-                // Remove Custom Panels
                 if (CustomPanels.ContainsKey(pluginName))
                 {
                     var windows = CustomPanels[pluginName];

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -15,7 +16,6 @@ using ZUI.UI.UniverseLib.UI.Panels;
 using ZUI.Utils;
 using ZUI.UI.Components;
 using Il2CppInterop.Runtime;
-
 namespace ZUI.UI.ModContent
 {
     public class CustomModPanel : ResizeablePanelBase
@@ -24,7 +24,6 @@ namespace ZUI.UI.ModContent
         public string WindowId { get; private set; }
         public override string PanelId => $"{PluginName}_{WindowId}";
         public override PanelType PanelType => PanelType.Base;
-
         // Dimensions
         private int _initialWidth;
         private int _initialHeight;
@@ -52,6 +51,10 @@ namespace ZUI.UI.ModContent
 
         private Sprite _tabNormalSprite;
         private Sprite _tabActiveSprite;
+
+        // Data Binding System
+        private readonly Dictionary<string, Func<string>> _dataContext = new Dictionary<string, Func<string>>();
+        private readonly Dictionary<string, ToggleGroup> _radioGroups = new Dictionary<string, ToggleGroup>();
 
         private class TabContext
         {
@@ -96,7 +99,6 @@ namespace ZUI.UI.ModContent
 
         private void PreloadTabSprites()
         {
-            // Use executing assembly to ensure we find ZUI's local folder correctly
             var assembly = Assembly.GetExecutingAssembly();
             _tabNormalSprite = SpriteLoader.LoadSpriteFromAssembly(assembly, "button.png", 100f, new Vector4(10, 10, 10, 10));
             _tabActiveSprite = SpriteLoader.LoadSpriteFromAssembly(assembly, "button_selected.png", 100f, new Vector4(10, 10, 10, 10));
@@ -104,7 +106,6 @@ namespace ZUI.UI.ModContent
 
         private void OnRegistryChanged()
         {
-            // When the registry changes (download finished), check if any placeholders can be replaced
             for (int i = _pendingSprites.Count - 1; i >= 0; i--)
             {
                 var pending = _pendingSprites[i];
@@ -120,7 +121,6 @@ namespace ZUI.UI.ModContent
                     pending.TargetImage.sprite = sprite;
                     pending.TargetImage.color = Color.white;
 
-                    // Check if the newly arrived data is a GIF
                     var gifData = SpriteLoader.GetGif(pending.SpriteName);
                     if (gifData != null && pending.Owner.GetComponent<GifPlayer>() == null)
                     {
@@ -185,7 +185,7 @@ namespace ZUI.UI.ModContent
             else
             {
                 TitleBar.SetActive(_hasCustomTitle);
-                Dragger.DraggableArea = Rect;
+                Dragger.DraggableArea = TitleBar.GetComponent<RectTransform>();
                 ConstructAbsoluteLayout();
             }
         }
@@ -441,6 +441,112 @@ namespace ZUI.UI.ModContent
             }
         }
 
+        // ==============================================================================================
+        // INPUT COMPONENTS (DATA FIELDS)
+        // ==============================================================================================
+
+        public void AddInputField(string id, string placeholder, float x, float y, float w)
+        {
+            if (_isTemplateMode) return;
+            var parent = _activeTabContent ?? _absoluteContainer;
+
+            // Returns InputFieldRef
+            var inputRef = UIFactory.CreateInputField(parent, id, placeholder);
+            PositionElement(inputRef.GameObject, x, y, w, 30);
+
+            _dataContext[id] = () => inputRef.Component.text;
+            RegisterElement(id, inputRef.GameObject);
+        }
+
+        public void AddToggle(string id, string labelText, bool defaultValue, float x, float y)
+        {
+            if (_isTemplateMode) return;
+            var parent = _activeTabContent ?? _absoluteContainer;
+
+            // Returns ToggleRef
+            var toggleRef = UIFactory.CreateToggle(parent, id, default, 20, 20, labelText);
+            toggleRef.Toggle.isOn = defaultValue;
+
+            PositionElement(toggleRef.GameObject, x, y, 150, 25);
+
+            _dataContext[id] = () => toggleRef.Toggle.isOn.ToString().ToLower();
+            RegisterElement(id, toggleRef.GameObject);
+        }
+
+        public void AddRadioButton(string id, string groupName, string labelText, bool defaultValue, float x, float y)
+        {
+            if (_isTemplateMode) return;
+            var parent = _activeTabContent ?? _absoluteContainer;
+
+            if (!_radioGroups.TryGetValue(groupName, out var group))
+            {
+                group = parent.GetComponent<ToggleGroup>();
+                if (group == null) group = parent.AddComponent<ToggleGroup>();
+                _radioGroups[groupName] = group;
+            }
+
+            var toggleRef = UIFactory.CreateToggle(parent, id, default, 20, 20, labelText);
+            toggleRef.Toggle.group = group;
+            toggleRef.Toggle.isOn = defaultValue;
+
+            PositionElement(toggleRef.GameObject, x, y, 150, 25);
+
+            _dataContext[id] = () => toggleRef.Toggle.isOn.ToString().ToLower();
+            RegisterElement(id, toggleRef.GameObject);
+        }
+
+        public void AddSlider(string id, float min, float max, float defaultValue, float x, float y, float w)
+        {
+            if (_isTemplateMode) return;
+            var parent = _activeTabContent ?? _absoluteContainer;
+
+            // Returns GameObject, out Slider
+            var sliderObj = UIFactory.CreateSlider(parent, id, out var sliderComp);
+            sliderComp.minValue = min;
+            sliderComp.maxValue = max;
+            sliderComp.value = defaultValue;
+
+            PositionElement(sliderObj, x, y, w, 30);
+
+            // Add value label
+            var valLabel = UIFactory.CreateLabel(sliderObj, $"{id}_Val", defaultValue.ToString("F2"), TextAlignmentOptions.Right);
+            var lblRect = valLabel.GameObject.GetComponent<RectTransform>();
+            lblRect.anchorMin = new Vector2(1, 0); lblRect.anchorMax = new Vector2(1, 1);
+            lblRect.pivot = new Vector2(1, 0.5f);
+            lblRect.anchoredPosition = new Vector2(40, 0); // Position to the right of slider
+            // Make sure label doesn't block slider interaction
+            if (valLabel.TextMesh.gameObject.GetComponent<CanvasGroup>() == null)
+                valLabel.TextMesh.gameObject.AddComponent<CanvasGroup>().blocksRaycasts = false;
+
+            sliderComp.onValueChanged.AddListener((val) => { valLabel.TextMesh.text = val.ToString("F2"); });
+
+            _dataContext[id] = () => sliderComp.value.ToString("F2");
+            RegisterElement(id, sliderObj);
+        }
+        public void AddDropdown(string id, List<string> options, int defaultIndex, float x, float y, float w)
+        {
+            if (_isTemplateMode) return;
+            var parent = _activeTabContent ?? _absoluteContainer;
+
+            string defaultText = (options.Count > defaultIndex && defaultIndex >= 0) ? options[defaultIndex] : "";
+
+            // Returns GameObject, out TMP_Dropdown
+            var dropdownObj = UIFactory.CreateDropdown(parent, id, out var dropdownComp, defaultText, 14, null, options.ToArray());
+            dropdownComp.value = defaultIndex;
+
+            PositionElement(dropdownObj, x, y, w, 30);
+
+            _dataContext[id] = () =>
+            {
+                if (dropdownComp.options.Count > 0 && dropdownComp.value >= 0 && dropdownComp.value < dropdownComp.options.Count)
+                    return dropdownComp.options[dropdownComp.value].text;
+                return "";
+            };
+            RegisterElement(id, dropdownObj);
+        }
+
+        // ==============================================================================================
+
         public void AddImage(string id, Assembly assembly, string imageName, float x, float y, float w, float h)
         {
             if (_isTemplateMode) return;
@@ -463,7 +569,7 @@ namespace ZUI.UI.ModContent
             }
             else
             {
-                img.color = new Color(1f, 1f, 1f, 0.1f); // Gray box placeholder
+                img.color = new Color(1f, 1f, 1f, 0.1f);
                 _pendingSprites.Add(new PendingSprite { TargetImage = img, SpriteName = imageName, Assembly = assembly, Owner = imgObj });
             }
 
@@ -473,12 +579,12 @@ namespace ZUI.UI.ModContent
 
         public void AddButton(string id, string text, string command, float x = -1, float y = -1)
         {
-            CreateGenericButton(id, typeof(Plugin).Assembly, text, command, null, x, y, -1, -1, () => { if (!string.IsNullOrEmpty(command)) MessageService.EnqueueMessage(command); });
+            CreateGenericButton(id, typeof(Plugin).Assembly, text, command, null, x, y, -1, -1, () => { ExecuteCommand(command); });
         }
 
         public void AddButton(string id, Assembly assembly, string text, string command, string imageName, float x, float y, float w, float h)
         {
-            CreateGenericButton(id, assembly, text, command, imageName, x, y, w, h, () => { if (!string.IsNullOrEmpty(command)) MessageService.EnqueueMessage(command); });
+            CreateGenericButton(id, assembly, text, command, imageName, x, y, w, h, () => { ExecuteCommand(command); });
         }
 
         public void AddButtonWithCallback(string id, string text, Action callback, float x = -1, float y = -1)
@@ -491,15 +597,59 @@ namespace ZUI.UI.ModContent
             CreateGenericButton(id, typeof(Plugin).Assembly, text, null, null, x, y, -1, -1, () => { this.SetActive(false); });
         }
 
+        private void ExecuteCommand(string command)
+        {
+            if (string.IsNullOrEmpty(command)) return;
+
+            string finalCommand = ParseCommandData(command);
+
+            // === ZUI INTERNAL COMMAND INTERCEPTION ===
+            // This prevents "zui_play" from going to chat/server
+            if (finalCommand.StartsWith("zui_play", StringComparison.OrdinalIgnoreCase))
+            {
+                HandleZuiPlay(finalCommand);
+                return;
+            }
+            // =========================================
+
+            MessageService.EnqueueMessage(finalCommand);
+        }
+        private void HandleZuiPlay(string command)
+        {
+            // Format: zui_play <soundname> [volume]
+            string[] parts = command.Split(' ');
+            if (parts.Length < 2) return;
+
+            string soundName = parts[1];
+            float volume = 1.0f;
+            if (parts.Length > 2) float.TryParse(parts[2], out volume);
+
+            AudioLoader.Play(soundName, volume);
+        }
+
+        private string ParseCommandData(string command)
+        {
+            return Regex.Replace(command, @"\{([a-zA-Z0-9_]+)\}", match =>
+            {
+                string key = match.Groups[1].Value;
+                if (_dataContext.TryGetValue(key, out var valueFunc))
+                {
+                    return valueFunc();
+                }
+                return match.Value;
+            });
+        }
+
         private void CreateGenericButton(string id, Assembly assembly, string text, string command, string customImageName, float x, float y, float width, float height, Action onClick)
         {
             GameObject parent = _activeTabContent ?? (_isTemplateMode ? _buttonScrollContent : _absoluteContainer);
-            var btn = UIFactory.CreateButton(parent, id, text);
+            // Returns ButtonRef
+            var btnRef = UIFactory.CreateButton(parent, id, text);
 
-            if (_isTemplateMode) UIFactory.SetLayoutElement(btn.GameObject, minHeight: 32, flexibleWidth: 9999);
-            else { float finalW = width > 0 ? width : 120; float finalH = height > 0 ? height : 30; PositionElement(btn.GameObject, x, y, finalW, finalH); }
+            if (_isTemplateMode) UIFactory.SetLayoutElement(btnRef.GameObject, minHeight: 32, flexibleWidth: 9999);
+            else { float finalW = width > 0 ? width : 120; float finalH = height > 0 ? height : 30; PositionElement(btnRef.GameObject, x, y, finalW, finalH); }
 
-            var img = btn.GameObject.GetComponent<Image>();
+            var img = btnRef.GameObject.GetComponent<Image>();
 
             if (!string.IsNullOrEmpty(customImageName))
             {
@@ -507,19 +657,19 @@ namespace ZUI.UI.ModContent
                 if (customSprite != null)
                 {
                     img.sprite = customSprite; img.type = Image.Type.Simple; img.color = Color.white;
-                    btn.Component.transition = Selectable.Transition.ColorTint;
+                    btnRef.Component.transition = Selectable.Transition.ColorTint;
 
                     var gifData = SpriteLoader.GetGif(customImageName);
                     if (gifData != null)
                     {
-                        var player = btn.GameObject.AddComponent(Il2CppType.Of<GifPlayer>()).Cast<GifPlayer>();
+                        var player = btnRef.GameObject.AddComponent(Il2CppType.Of<GifPlayer>()).Cast<GifPlayer>();
                         player.SetGifData(gifData);
                     }
                 }
                 else
                 {
                     img.color = new Color(1f, 1f, 1f, 0.1f);
-                    _pendingSprites.Add(new PendingSprite { TargetImage = img, SpriteName = customImageName, Assembly = assembly, Owner = btn.GameObject });
+                    _pendingSprites.Add(new PendingSprite { TargetImage = img, SpriteName = customImageName, Assembly = assembly, Owner = btnRef.GameObject });
                 }
             }
             else
@@ -533,7 +683,7 @@ namespace ZUI.UI.ModContent
                     img.sprite = normalSprite; img.type = Image.Type.Sliced; img.color = Color.white;
                     if (selectedSprite != null)
                     {
-                        var comp = btn.Component; comp.transition = Selectable.Transition.SpriteSwap;
+                        var comp = btnRef.Component; comp.transition = Selectable.Transition.SpriteSwap;
                         var state = comp.spriteState;
                         state.highlightedSprite = selectedSprite; state.pressedSprite = selectedSprite; state.selectedSprite = selectedSprite;
                         comp.spriteState = state;
@@ -541,16 +691,17 @@ namespace ZUI.UI.ModContent
                 }
                 else
                 {
-                    _pendingSprites.Add(new PendingSprite { TargetImage = img, SpriteName = "button.png", Assembly = zuiAssembly, Owner = btn.GameObject });
+                    _pendingSprites.Add(new PendingSprite { TargetImage = img, SpriteName = "button.png", Assembly = zuiAssembly, Owner = btnRef.GameObject });
                 }
             }
-            if (onClick != null) btn.OnClick = onClick;
-            RegisterElement(id, btn.GameObject);
+            if (onClick != null) btnRef.OnClick = onClick;
+            RegisterElement(id, btnRef.GameObject);
         }
 
         public void RemoveElement(string id)
         {
             if (_elements.TryGetValue(id, out var obj)) { if (obj != null) UnityEngine.Object.Destroy(obj); _elements.Remove(id); }
+            _dataContext.Remove(id);
         }
 
         private void RegisterElement(string id, GameObject obj) { RemoveElement(id); _elements[id] = obj; }
@@ -566,10 +717,8 @@ namespace ZUI.UI.ModContent
         #endregion
         internal override void Reset()
         {
-            // Unsubscribe from events during reset to prevent memory leaks or multiple subscriptions
             ZUI.API.ModRegistry.OnButtonsChanged -= OnRegistryChanged;
 
-            // --- FIX: Properly destroy all children of the container so items aren't duplicated ---
             if (_absoluteContainer != null)
             {
                 for (int i = _absoluteContainer.transform.childCount - 1; i >= 0; i--)
@@ -578,7 +727,6 @@ namespace ZUI.UI.ModContent
                 }
             }
 
-            // --- FIX: Properly destroy all tab buttons ---
             if (_tabBar != null)
             {
                 for (int i = _tabBar.transform.childCount - 1; i >= 0; i--)
@@ -590,12 +738,13 @@ namespace ZUI.UI.ModContent
 
             foreach (var el in _elements.Values) { if (el != null) UnityEngine.Object.Destroy(el); }
             _elements.Clear();
+            _dataContext.Clear();
+            _radioGroups.Clear();
             _pendingSprites.Clear();
             _tabs.Clear();
 
             _activeTabContent = null;
 
-            // Re-subscribe after clearing so it's ready for new content
             ZUI.API.ModRegistry.OnButtonsChanged += OnRegistryChanged;
         }
 

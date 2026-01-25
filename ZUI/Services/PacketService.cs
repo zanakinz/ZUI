@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using ZUI.API;
 using ZUI.Utils;
@@ -64,6 +65,23 @@ namespace ZUI.Services
 
             switch (p.Type)
             {
+                // --- AUDIO COMMANDS ---
+                case "RegisterSound":
+                    if (d.ContainsKey("Name") && d.ContainsKey("Url"))
+                    {
+                        ModRegistry.RegisterAudio(d["Name"], d["Url"]);
+                    }
+                    break;
+
+                case "PlaySound":
+                    if (d.ContainsKey("Name"))
+                    {
+                        float vol = ParseFloat(d, "Vol", 1.0f);
+                        ModRegistry.PlaySound(d["Name"], vol);
+                    }
+                    break;
+
+                // --- UI COMMANDS ---
                 case "RegisterImage":
                     if (d.ContainsKey("Name") && d.ContainsKey("Url"))
                     {
@@ -108,6 +126,54 @@ namespace ZUI.Services
                     if (d.ContainsKey("Text"))
                         ModRegistry.AddText(d["Text"], ParseFloat(d, "X", -1), ParseFloat(d, "Y", -1));
                     break;
+
+                // --- DATA FIELD COMMANDS ---
+
+                case "AddInput":
+                    if (d.ContainsKey("Id"))
+                    {
+                        string ph = d.ContainsKey("Text") ? d["Text"] : "";
+                        ModRegistry.AddInputField(d["Id"], ph, ParseFloat(d, "X"), ParseFloat(d, "Y"), ParseFloat(d, "W", 150));
+                    }
+                    break;
+
+                case "AddToggle":
+                    if (d.ContainsKey("Id") && d.ContainsKey("Text"))
+                    {
+                        bool def = d.ContainsKey("Default") && bool.Parse(d["Default"]);
+                        ModRegistry.AddToggle(d["Id"], d["Text"], def, ParseFloat(d, "X"), ParseFloat(d, "Y"));
+                    }
+                    break;
+
+                case "AddRadio":
+                    if (d.ContainsKey("Id") && d.ContainsKey("Group") && d.ContainsKey("Text"))
+                    {
+                        bool def = d.ContainsKey("Default") && bool.Parse(d["Default"]);
+                        ModRegistry.AddRadioButton(d["Id"], d["Group"], d["Text"], def, ParseFloat(d, "X"), ParseFloat(d, "Y"));
+                    }
+                    break;
+
+                case "AddSlider":
+                    if (d.ContainsKey("Id"))
+                    {
+                        float min = ParseFloat(d, "Min", 0);
+                        float max = ParseFloat(d, "Max", 100);
+                        float def = ParseFloat(d, "Default", 0);
+                        ModRegistry.AddSlider(d["Id"], min, max, def, ParseFloat(d, "X"), ParseFloat(d, "Y"), ParseFloat(d, "W", 150));
+                    }
+                    break;
+
+                case "AddDropdown":
+                    if (d.ContainsKey("Id") && d.ContainsKey("Options"))
+                    {
+                        int def = ParseInt(d.ContainsKey("Default") ? d["Default"] : "0");
+                        // Server sends options separated by pipe character |
+                        List<string> opts = d["Options"].Split('|').ToList();
+                        ModRegistry.AddDropdown(d["Id"], opts, def, ParseFloat(d, "X"), ParseFloat(d, "Y"), ParseFloat(d, "W", 150));
+                    }
+                    break;
+
+                // ---------------------------
 
                 case "AddButton":
                     if (d.ContainsKey("Text") && d.ContainsKey("Cmd"))

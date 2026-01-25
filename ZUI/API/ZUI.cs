@@ -54,7 +54,7 @@ namespace ZUI.API
         }
 
         // ==============================================================================================
-        // TABS (NEW)
+        // TABS
         // ==============================================================================================
 
         public static void CreateTab(string name, string tooltip = "")
@@ -120,6 +120,48 @@ namespace ZUI.API
             ModRegistry.AddImage(assembly, imageName, x, y, width, height);
         }
 
+        // --- DATA FIELDS ---
+
+        /// <summary>
+        /// Adds a text input field. Use {id} in button commands to retrieve the value.
+        /// </summary>
+        public static void AddInput(string id, string placeholder, float x, float y, float width = 150)
+        {
+            ModRegistry.AddInputField(id, placeholder, x, y, width);
+        }
+
+        /// <summary>
+        /// Adds a checkbox toggle. Use {id} in button commands to retrieve "true" or "false".
+        /// </summary>
+        public static void AddToggle(string id, string label, bool defaultValue, float x, float y)
+        {
+            ModRegistry.AddToggle(id, label, defaultValue, x, y);
+        }
+
+        /// <summary>
+        /// Adds a radio button. Only one radio button in a 'group' can be active. Use {id} to retrieve "true" or "false".
+        /// </summary>
+        public static void AddRadio(string id, string group, string label, bool defaultValue, float x, float y)
+        {
+            ModRegistry.AddRadioButton(id, group, label, defaultValue, x, y);
+        }
+
+        /// <summary>
+        /// Adds a slider control. Use {id} in button commands to retrieve the numeric value.
+        /// </summary>
+        public static void AddSlider(string id, float min, float max, float defaultValue, float x, float y, float width = 150)
+        {
+            ModRegistry.AddSlider(id, min, max, defaultValue, x, y, width);
+        }
+
+        /// <summary>
+        /// Adds a dropdown list. Use {id} in button commands to retrieve the selected text option.
+        /// </summary>
+        public static void AddDropdown(string id, List<string> options, int defaultIndex, float x, float y, float width = 150)
+        {
+            ModRegistry.AddDropdown(id, options, defaultIndex, x, y, width);
+        }
+
         // --- CLOSE BUTTONS ---
 
         public static void AddCloseButton(string text = "Close")
@@ -130,6 +172,37 @@ namespace ZUI.API
         public static void AddCloseButton(string text, float x, float y)
         {
             ModRegistry.AddCloseButton(text, x, y);
+        }
+
+        // ==============================================================================================
+        // AUDIO
+        // ==============================================================================================
+
+        /// <summary>
+        /// Registers a sound file from a URL.
+        /// </summary>
+        /// <param name="name">Unique ID for the sound</param>
+        /// <param name="url">HTTPS URL to .wav, .mp3, or .ogg</param>
+        public static void RegisterSound(string name, string url)
+        {
+            ModRegistry.RegisterAudio(name, url);
+        }
+
+        /// <summary>
+        /// Plays a registered sound or local file.
+        /// </summary>
+        /// <param name="name">Registered ID or filename in Audio folder</param>
+        /// <param name="volume">Volume 0.0 to 1.0</param>
+        public static void PlaySound(string name, float volume = 1.0f)
+        {
+            // If it's a local file call (has extension), we check local folder first
+            if (name.Contains("."))
+            {
+                var assembly = Assembly.GetCallingAssembly();
+                Services.AudioManager.LoadLocalClip(assembly, name);
+            }
+
+            ModRegistry.PlaySound(name, volume);
         }
 
         // ==============================================================================================

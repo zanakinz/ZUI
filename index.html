@@ -820,6 +820,7 @@
                 attachRemote: ""
             };
 
+            // Set default sizes based on type
             if (type === 'button') { el.w = 120; el.h = 30; }
             else if (type === 'image') { el.w = 64; el.h = 64; }
             else if (type === 'text') { el.w = 150; el.h = 20; }
@@ -835,8 +836,10 @@
             }
 
             elements.push(el);
-            render();
-            select(el.uid);
+            
+            // OLD BEHAVIOR: select(el.uid);
+            // NEW BEHAVIOR: Immediately deselect to prevents accidental edits
+            deselectElement(); 
         }
 
         // --- RENDER ---
